@@ -1,59 +1,57 @@
-Managing complex business transactions
+복잡한 비즈니스 트랜잭션 관리하기
 ======================================
 
-Not every command is able to completely execute in a single ACID transaction. A very common example that pops up quite often as an argument for transactions is the money transfer. It is often believed that an atomic and consistent transaction is absolutely required to transfer money from one account to another. Well, it's not. On the contrary, it is quite impossible to do. What if money is transferred from an account on Bank A, to another account on Bank B? Does Bank A acquire a lock in Bank B's database? If the transfer is in progress, is it strange that Bank A has deducted the amount, but Bank B hasn't deposited it yet? Not really, it's "underway". On the other hand, if something goes wrong while depositing the money on Bank B's account, Bank A's customer would want his money back. So we do expect some form of consistency, ultimately.
+모든 명령을 단일 ACID 트랜잭션으로 완전히 처리할 수는 없습니다. 가장 대표적인 예로 이체를 들 수 있습니다. 보통 하나의 계좌에서 다른 계좌로 돈을 이체하기 위해서는 원자 적이고 일관된 트랜잭션 처리가 필요하다고 보지만, 실은 그렇지 않습니다. 오히려 그렇게 하는 것은 불가능합니다. 은행 A의 한 계좌에서 은행 B의 계좌로 돈을 이체할 경우, 은행 A가 은행 B의 데이터베이스의 잠금(lock)을 얻을 수 있을까요? 이체가 진행 중이라면, 은행 B가 이체된 금액을 아직 입금하지 않았는데, 은행 A가 이체 금액을 계좌에서 차감할 수 있을까요? 실제로 은행 간 이체는 "진행 중" 입니다. 한편, 은행 B에서 이체 금액을 입금하는 동안 문제가 발생하여 뭔가 잘못되었다면, 은행 A의 고객에게 이체 금액을 되돌려 주어야 합니다. 따라서 궁극적으로 다른 형태의 일관성이 필요합니다.
 
-While ACID transactions are not necessary or even impossible in some cases, some form of transaction management is still required. Typically, these transactions are referred to as BASE transactions: **B**asic **A**vailability, **S**oft state, **E**ventual consistency. Contrary to ACID, BASE transactions cannot be easily rolled back. To roll back, compensating actions need to be taken to revert anything that has occurred as part of the transaction. In the money transfer example, a failure at Bank B to deposit the money, will refund the money in Bank A.
+ACID 트랜잭션은 불필요하거나 혹은 몇몇 경우 ACID 트랜잭션을 통한 처리는 불가능하지만, 다른 형태의 트랜잭션 관리는 여전히 필요합니다. 일반적으로 이런 트랜잭션들은 BASE(**B**asic, **A**vailability, **S**oft state, **E**ventual consistency) 트랜잭션이라고 합니다. ACID와는 반대로, BASE 트랜잭션들은 쉽게 되돌릴(롤백:rollback) 수 없습니다. 롤백하기 위해선, 트랜잭션 일부로 이미 발생한 것을 되돌릴 작업을 통해 상쇄시켜야 합니다. 은행 간 이체 예제에서, 은행 B에서 이체 금액의 입금이 실패했을 때 은행 A로 해당 금액을 다시 되돌려 주게 됩니다.
 
-In CQRS, Sagas can be used to manage these BASE transactions. They respond on Events and may dispatch Commands, invoke external applications, etc. In the context of Domain Driven Design, it is not uncommon for Sagas to be used as coordination mechanism between several bounded contexts.
+CQRS에선, Saga들을 통해 BASE 트랜잭션들을 처리할 수 있습니다. Saga들은 이벤트들에 응답하고 명령을 보내며 외부 애플리케이션을 호출할 수 있습니다. 도메인 주도 설계(Domain Driven Design)에 따르면, 여러 바운디드 컨텍스트(bounded context)간 조정 메커니즘으로 Saga들을 사용하는 것은 흔한 일입니다.
 
-Saga
+사가(Saga)
 ====
 
-A Saga is a special type of Event Listener: one that manages a business transaction. Some transactions could be running for days or even weeks, while others are completed within a few milliseconds. In Axon, each instance of a Saga is responsible for managing a single business transaction. That means a Saga maintains state necessary to manage that transaction, continuing it or taking compensating actions to roll back any actions already taken. Typically, and contrary to regular Event Listeners, a Saga has a starting point and an end, both triggered by Events. While the starting point of a Saga is usually very clear, there could be many ways for a Saga to end.
+Saga는 비즈니스 트랜잭션을 관리할 수 있는 특별한 유형의 이벤트 리스너입니다. 일반적인 트랜잭션들은 거의 즉시 처리되어 완료되지만, 일부 트랜잭션들은 며칠 혹은 몇 주에 걸쳐 진행될 수 있습니다. Axon에서 제공하는 Saga의 개별 인스턴스를 통해 단일 비즈니스 트랜잭션을 처리할 수 있습니다. 다시 말해, Saga는 트랜잭션을 관리하기 위한 속성을 유지하여, 트랜잭션의 진행 혹은 이미 발생한 작업에 대한 롤백(rollback) 작업을 처리할 수 있습니다. 일반적으로, 그리고 보통의 이벤트 리스너와는 반대로, Saga는 이벤트를 기반으로 한 시작 시점과 종료 시점을 가집니다. 보통 Saga의 시작 시점은 분명하나, Saga의 종료 시점은 여러 개가 존재할 수 있습니다.
 
-In Axon, Sagas are classes that define one or more `@SagaEventHandler` methods. Unlike regular Event Handlers, multiple instances of a Saga may exist at any time. Sagas are managed by a single Processor (Tracking or Subscribing), which is dedicated to dealing with Events for that specific Saga type.
+Axon에서 Saga 클래스는 하나 혹은 그 이상의 `@SagaEventHandler` 에노테이션으로 정의할 수 있습니다. 보통의 이벤트 처리자와는 달리, 특정 시점에 다수의 Saga 인스턴스가 존재할 수 있습니다. Saga 인스턴스들은 정의된 Saga 타입에 대한 이벤트들의 처리를 위한 단일 프로세서(추적 혹은 구독)에 의해 관리됩니다.  
 
-Life Cycle
+생애 주기
 ----------
 
-A single Saga instance is responsible for managing a single transaction. That means you need to be able to indicate the start and end of a Saga's Life Cycle.
+단일 Saga 인스턴스는 단일 트랜잭션에 대한 처리를 담당합니다. 다시 말해, Saga 생애주기의 시작과 종료를 표시할 필요가 있습니다. Saga에서, 이벤트 처리자들에 `@SagaEventHandler` 에노테이션을 붙여야 합니다. 특정 이벤트가 트랜잭션의 시작을 나타낸다면, `@SagaEventHandler` 에노테이션을 사용한 메서드에 `@StartSaga` 에노테이션을 추가로 사용해야 합니다. `@StartSaga` 에노테이션은 새로운 Saga를 생성하고 원하는 이벤트가 발생 했을 때 해당 Saga의 이벤트 처리 메서드를 호출하도록 합니다.
 
-In a Saga, Event Handlers are annotated with `@SagaEventHandler`. If a specific Event signifies the start of a transaction, add another annotation to that same method: `@StartSaga`. This annotation will create a new saga and invoke its event handler method when a matching Event is published.
+ 기본적으로, 새로운 Saga는 이미 생성된 Saga가 없는 경우에만 생성이 됩니다. `@StartSaga` 에노테이션의 `forceNew` 속성값을 `true`로 설정하여, 새로운 Saga 인스턴스를 생성하도록 강제할 수 있습니다.
 
-By default, a new Saga is only started if no suitable existing Saga (of the same type) can be found. You can also force the creation of a new Saga instance by setting the `forceNew` property on the `@StartSaga` annotation to `true`.
+ Saga의 종료는 두 가지 방법으로 처리할 수 있습니다. 특정 이벤트가 Saga 생애주기의 종료를 언제나 나타낸다면, 해당 이벤트를 처리하는 `@SagaEventHandler` 에노테이션을 사용한 메서드에 `@EndSaga` 에노테이션을 사용하면 됩니다. Saga의 생애주기는 이벤트 처리 메서드 호출 후에 종료됩니다. 다른 방법으로, Saga내에서 `end()` 메서드를 호출하여 Saga의 생애 주기를 종료할 수 있습니다. `end()`메서드를 사용하면 조건에 따라 Saga의 생애 주기를 종료할 수 있습니다.
 
-Ending a Saga can be done in two ways. If a certain Event always indicates the end of a Saga's life cycle, annotate that Event's handler on the Saga with `@EndSaga`. The Saga's Life Cycle will be ended after the invocation of the handler. Alternatively, you can call `SagaLifecycle.end()` from inside the Saga to end the life cycle. This allows you to conditionally end the Saga.
-
-Event Handling
+이벤트 처리
 --------------
 
-Event Handling in a Saga is quite comparable to that of a regular Event Listener. The same rules for method and parameter resolution are valid here. There is one major difference, though. While there is a single instance of an Event Listener that deals with all incoming events, multiple instances of a Saga may exist, each interested in different Events. For example, a Saga that manages a transaction around an Order with Id "1" will not be interested in Events regarding Order "2", and vice versa.
+Saga 내에서의 이벤트 처리는 보통의 이벤트 처리자와 거의 같습니다. 메서드와 매개변수 분석에 대해서도 같은 규칙이 적용됩니다. 큰 차이점은 수신된 이벤트를 처리하는 이벤트 처리자의 인스턴스는 하나만 존재하지만, Saga 인스턴스는 여러 개가 존재할 수도 있고 각기 다른 이벤트에 관심이 있습니다. 예를 들어, 1번 주문과 관련된 트랜잭션을 처리하는 Saga는 2번 주문에 대한 이벤트들에는 관심이 없습니다. 이는 2번 주문을 처리하는 Saga도 같습니다.
 
-Instead of publishing all Events to all Saga instances (which would be a complete waste of resources), Axon will only publish Events containing properties that the Saga has been associated with. This is done using `AssociationValue`s. An `AssociationValue` consists of a key and a value. The key represents the type of identifier used, for example "orderId" or "order". The value represents the corresponding value, "1" or "2" in the previous example.
-    
-The order in which `@SagaEventHandler` annotated methods are evaluated is identical to that of `@EventHandler` methods (see [Annotated Event Handler](event-handling.md#defining-event-handlers)). A method matches if the parameters of the handler method match the incoming Event, and if the saga has an association with the property defined on the handler method.
+모든 이벤트를 모든 Saga 인스턴스에 전달하는 것 -자원을 낭비하는 것이 분명한- 대신, Axon은 Saga와 관련된 속성을 포함하고 있는 이벤트들만을 전달합니다. 이를 위해 `AssociationValue`들을 사용하며, `AssociationValue`는 키와 값으로 구성이 되어 있습니다. 키값은 예를 들어 "주문 아이디" 혹은 "주문"과 같은 식별자의 유형을 나타냅니다. 키와 연결된 값은 "1" 혹은 "2"와 같이 식별자 유형에 대한 값을 나타냅니다.
 
-The `@SagaEventHandler` annotation has two attributes, of which `associationProperty` is the most important one. This is the name of the property on the incoming Event that should be used to find associated Sagas. The key of the association value is the name of the property. The value is the value returned by property's getter method.
+`@SagaEventHandler` 에노테이션이 사용된 메서드의 전개 순서는 `@EventHandler` 에노테이션이 사용된 메서드의 전개 순서와 동일합니다. (참조: [이벤트 처리자 정의하기](#이벤트 처리자 정의하기)). 수신한 이벤트와 이벤트 처리 메서드의 매개변수들이 일치하고 이벤트 처리 메서드에 정의되어 있는 속성들이 Saga와 연결된 경우에, 해당 메서드는 호출이 됩니다.
 
-For example, consider an incoming Event with a method "`String getOrderId()`", which returns "123". If a method accepting this Event is annotated with `@SagaEventHandler(associationProperty="orderId")`, this Event is routed to all Sagas that have been associated with an `AssociationValue` with key "orderId" and value "123". This may either be exactly one, more than one, or even none at all.
+`@SagaEventHandler` 에노테이션은 두 개의 속성을 가집니다. 가장 중요한 속성은 `associationProperty`이며, 속성값은 이벤트와 연결된 Saga를 찾기 위해 사용되는 수신 이벤트의 속성 명입니다. 연결 값의 키가 속성의 이름이며, 값은 속성의 getter 메서드를 통해 반환되는 값입니다.
 
-Sometimes, the name of the property you want to associate with is not the name of the association you want to use. For example, you have a Saga that matches Sell orders against Buy orders, you could have a Transaction object that contains the "buyOrderId" and a "sellOrderId". If you want the saga to associate that value as "orderId", you can define a different keyName in the `@SagaEventHandler` annotation. It would then become `@SagaEventHandler(associationProperty="sellOrderId", keyName="orderId")`
+예를 들어, 수신 메시지 객체가 `String getOrderId()` 메서드를 가지며, 해당 메서드는 "123"을 반환한다고 하면, 해당 이벤트를 처리하는 메서드의 `@SagaEventHandler` 에노테이션은 orderId를 `associationProperty`의 값으로 가지고 있어야 합니다. 즉, `@SagaEventHandler(associationProperty="orderId")`와 같이 에노테이션을 사용해야 합니다. 그러면, 이 이벤트는 "orderId"를 키로 가지는 `AssociationValue`와 연결된 모든 Saga에게 전달됩니다. 이는 하나 혹은 그 이상의 Saga에 전달되거나 어떤 Saga에도 전달 되지 않음을 의미합니다.
 
-Managing associations
+ 때때로, 연결하고자 하는 속성의 이름이 사용하고자 하는 연결 이름이 아닐 때가 있습니다. 예를 들어, 구매 주문에 대한 판매 주문을 처리하기 위한 Saga를 정의해야 한다면, "buyOrderId"와 "sellOrderId"를 가지는 트랜잭션 객체를 정의할 수 있습니다. Saga를 "orderId"로 연결하고자 한다면, `@SagaEventHandler(associationProperty="sellOrderId", keyName="orderId")`와 같이 `@SagaEventHandler` 에노테이션에 다른 키 이름을 정의할 수 있습니다.
+
+객책간 연관 관리 하기
 ---------------------
 
-When a Saga manages a transaction across multiple domain concepts, such as Order, Shipment, Invoice, etc, that Saga needs to be associated with instances of those concepts. An association requires two parameters: the key, which identifies the type of association (Order, Shipment, etc) and a value, which represents the identifier of that concept.
+Saga를 통해 주문, 배송 그리고 송장 등과 같은 다수의 도메인 개념에 걸쳐 발생하는 트랜잭션을 관리할 때, Saga를 해당 도메인 객체의 인스턴스와 연결 시켜줘야 합니다. Saga와 도메인 객체의 인스턴스 간 연결은 해당 주문 그리고 배송 등과 같은 연결 유형을 식별하기 위한 **키**와 도메인 객체의 식별자를 나타내는 **값**이 필요합니다.
 
-Associating a Saga with a concept is done in several ways. First of all, when a Saga is newly created when invoking a `@StartSaga` annotated Event Handler, it is automatically associated with the property identified in the `@SagaEventHandler` method. Any other association can be created using the `SagaLifecycle.associateWith(String key, String/Number value)` method. Use the `SagaLifecycle.removeAssociationWith(String key, String/Number value)` method to remove a specific association.
+위와 같은 Saga와 도메인 객체는 다양한 방법으로 연결할 수 있습니다. 우선, `@StartSaga` 에노테이션이 사용된 이벤트 처리자를 호출하여 새로운 Saga가 생성되면, 생성된 Saga는 `@SagaEventHandler` 에노테이션에 명시된 속성과 자동으로 연결이 됩니다. 다른 연결은 `SafaLifecycle.associateWith(String key, String/Number value)` 메서드를 사용하여 생성할 수 있습니다. 생성한 특정 연결을 삭제하려면, `SagaLifecycle.removeAssociationWith(String key, String/Number value)` 메서드를 사용하세요.
 
-> Note
+> *참고*
 >
-> The API to associate domain concepts within a Saga intentionally only allows a `String` or a `Number` as the identifying value, since a `String` representation of the identifier is required for the association value entry which is stored. Using simple identifier values in the API with a straightforward `String` representation is by design, as a `String` column entry in the database makes the comparison between database engines simpler. It is thus intentionally that there is no `associateWith(String, Object)` for example, as the result of an `Object#toString()` call might provide unwieldy identifiers.
+> 사가(Saga) 내의 도메인 개념을 연관시키는 API는 식별자의 문자열 표현이 저장된 연관 값 항목에 필요하므로 의도적으로 문자열 또는 숫자를 식별 값으로 허용합니다. 데이터베이스의 문자열 열 항목은 데이터베이스 엔진 간의 비교를 보다 단순하게 만들기 때문에 간단한 String 표현을 사용하는 API의 간단한 식별자 값을 사용하는 것은 의도적으로 설계된 것입니다. 따라서 Object#toString()는 다루기 힘든 문자열 식별자를 제공할 수 있으므로 예를 들어 associateWith(String, Object) 메서드가 없는 것은 의도적입니다.
 
-Imagine a Saga that has been created for a transaction around an Order. The Saga is automatically associated with the Order, as the method is annotated with `@StartSaga`. The Saga is responsible for creating an Invoice for that Order, and tell Shipping to create a Shipment for it. Once both the Shipment have arrived and the Invoice has been paid, the transaction is completed and the Saga is closed.
+주문과 관련된 트랜잭션 처리를 위해 생성된 Saga를 생각해보세요. 주문 생성 이벤트를 처리하는 메서드에 `@StartSaga` 에노테이션이 사용되었기 때문에, 해당 Saga는 자동적으로 주문과 연결이 됩니다. 해당 Saga는 주문에 대한 송장을 생성하고 주문에 대한 배송을 준비시키도록 합니다. 배송이 완료되고 송장에 대한 지급이 완료되면, 트랜잭션과 Saga는 종료됩니다.
 
-Here is the code for such a Saga:
+위에서 설명한 Saga에 대한 코드는 아래와 같습니다.
 
 ``` java
 public class OrderManagementSaga {
@@ -66,13 +64,14 @@ public class OrderManagementSaga {
     @StartSaga
     @SagaEventHandler(associationProperty = "orderId")
     public void handle(OrderCreatedEvent event) {
-        // client generated identifiers
+        // shipmentId와 invoiceId를 생성합니다.
         ShippingId shipmentId = createShipmentId();
         InvoiceId invoiceId = createInvoiceId();
-        // associate the Saga with these values, before sending the commands
+
+        // 명령을 전송하기 전에 shipmentId와 invoiceId를 Saga와 연결합니다.
         SagaLifecycle.associateWith("shipmentId", shipmentId);
         SagaLifecycle.associateWith("invoiceId", invoiceId);
-        // send the commands
+        // 명령을 전송합니다.
         commandGateway.send(new PrepareShippingCommand(...));
         commandGateway.send(new CreateInvoiceCommand(...));
     }
@@ -92,110 +91,110 @@ public class OrderManagementSaga {
     // ...
 }
 ```
-By allowing clients to generate an identifier, a Saga can be easily associated with a concept, without the need to a request-response type command. We associate the event with these concepts before publishing the command. This way, we are guaranteed to also catch events generated as part of this command. This will end this saga once the invoice is paid and the shipment has arrived.
+클라이언트들이 식별자를 생성하게 함으로써, 요청-응답 형태의 명령 없이도 Saga와 도메인 객체들을 쉽게 연결할 수 있습니다. 명령을 보내기 전에, 도메인 객체들과 이벤트를 연결합니다. 이렇게 하면, 명령 일부로 생성되는 이벤트들을 감지할 수 있습니다. 송장에 대한 지급과 배송이 완료되면 Saga를 종료합니다.
 
-Keeping track of Deadlines
+마감 시한을 지키도록 하기
 --------------------------
 
-It is easy to make a Saga take action when something happens. After all, there is an Event to notify the Saga. But what if you want your Saga to do something when *nothing* happens? That's what deadlines are used for. In invoices, that's typically several weeks, while the confirmation of a credit card payment should occur within a few seconds.
+비즈니스 행위를 통해 이벤트가 발생하였을 때, Saga를 통해 쉽게 처리할 수 있습니다. 해당 이벤트가 Saga에게 전달되기 때문입니다. 하지만 아무것도 일어나지 않았을 때 Saga를 통해 처리하려면 어떻게 해야 할까요? 이를 위해 마감 시한(deadline)을 사용합니다. 송장의 예에서, 신용 카드 지급은 수초 안에 결제가 이루어지지만, 송장의 완료 처리는 보통 여러 주에 걸쳐 이루어집니다.
 
-In Axon, you can use an `EventScheduler` to schedule an Event for publication. In the example of an Invoice, you'd expect that invoice to be paid within 30 days. A Saga would, after sending the `CreateInvoiceCommand`, schedule an `InvoicePaymentDeadlineExpiredEvent` to be published in 30 days. The EventScheduler returns a `ScheduleToken` after scheduling an Event. This token can be used to cancel the schedule, for example when a payment of an Invoice has been received.
+Axon은 `EventScheduler`를 제공하여 이벤트를 발생시킬 수 있도록 합니다. 송장의 예에서, 송장이 30일 이내에 지급 완료되길 원한다면, Saga를 통해 `CreateInvoiceCommand`를 보낸 이후, `InvoicePaymentDeadlineExpiredEvent`를 30일이 되는 시점에 발생시킬 수 있습니다. 이벤트 스케쥴러(EventScheduler)는 특정 이벤트를 발생시키도록 일정을 생성(schedule)한 후, `ScheduleToken`을 반환합니다. 송장에 대한 지급이 이루어 지면, 반환된 `ScheduleToken`을 통해 해당 일정을 취소할 수 있습니다.
 
-Axon provides two `EventScheduler` implementations: a pure Java one and one using Quartz 2 as a backing scheduling mechanism.
+Axon은 두 개의 `EventScheduler`구현체들을 제공합니다. 하나는 순수 Java로 작성된 것이고 다른 하나는 backing scheduling 메커니즘인 Quartz2를 사용한 구현체입니다.
 
-This pure-Java implementation of the `EventScheduler` uses a `ScheduledExecutorService` to schedule Event publication. Although the timing of this scheduler is very reliable, it is a pure in-memory implementation. Once the JVM is shut down, all schedules are lost. This makes this implementation unsuitable for long-term schedules.
+`EventScheduler`의 순수 자바 구현체는 이벤트 게시 일정을 세우기 위해 `ScheduledExecutorService`를 사용합니다. 이 스케쥴러는 매우 안정적인 타이밍을 제공하지만, 메모리 기반 구현을 제공합니다. 따라서 JVM이 종료되면, 모든 일정이 사라지게 됩니다. 따라서 긴 기간에 걸친 일정을 처리하기에는 적당하지 않습니다.
 
-The `SimpleEventScheduler` needs to be configured with an `EventBus` and a `SchedulingExecutorService` (see the static methods on the `java.util.concurrent.Executors` class for helper methods).
+`SimpleEventScheduler`는 `EventBus`와 `SchedulingExecutorService`를 함께 설정해 주어야 합니다. (`ScheduledExecutorService` 생성 시 필요한 헬퍼 메서드는 [`java.util.concurrent.Executors`](https://docs.oracle.com/javase/8/docs/api/java/util/concurrent/Executors.html)를 참고하세요.)
 
-The `QuartzEventScheduler` is a more reliable and enterprise-worthy implementation. Using Quartz as underlying scheduling mechanism, it provides more powerful features, such as persistence, clustering and misfire management. This means Event publication is guaranteed. It might be a little late, but it will be published.
+`QuartzEventScheduler`는 더욱더 안정적이고 엔터프라이즈에 적당한 구현체입니다. Quartz를 기반 스케쥴링 메커니즘으로 사용하면, 영속화, 클러스터링 그리고 실패(misfire) 관리와 같은 더 강력한 기능들을 제공합니다. 해당 기능들을 사용하여 이벤트 게시를 확실히 보장할 수 있습니다. 조금 늦을 수는 있지만 결국 이벤트를 게시할 수 있습니다.
 
-It needs to be configured with a Quartz `Scheduler` and an `EventBus`. Optionally, you may set the name of the group that Quartz jobs are scheduled in, which defaults to "AxonFramework-Events".
+`QuartzEventScheduler`는 Quartz `Scheduler`와 `EventBus`를 필요로 합니다. 추가로, 기본적으로 "AxonFramework-Events"로 설정된 Quartz job들이 계획 되어 있는 그룹의 이름을 설정할 수 있습니다.
 
-One or more components will be listening for scheduled Events. These components might rely on a Transaction being bound to the Thread that invokes them. Scheduled Events are published by Threads managed by the `EventScheduler`. To manage transactions on these threads, you can configure a `TransactionManager` or a `UnitOfWorkFactory` that creates a Transaction Bound Unit of Work.
+하나 혹은 그 이상의 컴포넌트들은 계획 되어 있는 이벤트들을 수신할 수 있습니다. 이 컴포넌트들은 컴포넌트를 호출하는 스레드에 묶여 있는 트랜잭션에 의존할 수 있습니다. 계획 된 이벤트들은 `EventScheduler`를 관리하는 스레드에 의해 게시됩니다. 이런 스레드들 상의 트랜잭션을 관리하기 위해서, `TransactionManager` 혹은 작업 단위(Unit of Work)에 묶인 트랜잭션을 생성하는 `UnitOfWorkFactory`를 설정할 수 있습니다.
 
-> **Note**
+> **참고**
 >
-> Spring users can use the `QuartzEventSchedulerFactoryBean` or `SimpleEventSchedulerFactoryBean` for easier configuration. It allows you to set the PlatformTransactionManager directly.
+> 스프링을 사용한다면, `QuartzEventSchedulerFactoryBean` 혹은 `SimpleEventSchedulerFactoryBean`을 사용하여 더욱 쉽게 설정을 할 수 있습니다. `QuartzEventSchedulerFactoryBean` 그리고 `SimpleEventSchedulerFactoryBean`에 스프링의 트랜잭션 인프라의 핵심 인터페이스인 PlatformTransactionManager를 직접 설정할 수 있습니다.
 
-Injecting Resources
+필요 자원 주입하기
 -------------------
 
-Sagas generally do more than just maintaining state based on Events. They interact with external components. To do so, they need access to the Resources necessary to address to components. Usually, these resources aren't really part of the Saga's state and shouldn't be persisted as such. But once a Saga is reconstructed, these resources must be injected before an Event is routed to that instance.
+Saga들은 일반적으로 이벤트에 기반을 두고 상태를 유지하는 것 그 이상의 것들을 처리합니다. Saga들은 외부의 컴포넌트들과 연동할 수 있으며 이를 위해, 해당 컴포넌트들에 접근하는 데 필요한 자원들을 사용해야 합니다. 보통 이런 자원들은 Saga 상태의 일부는 아니며 영속화의 대상도 아닙니다. 하지만 Saga가 복원된 이후, Saga 인스턴스에 이벤트가 전달되기 전에 반드시 이런 자원들을 주입해야 합니다.
 
-For that purpose, there is the `ResourceInjector`. It is used by the `SagaRepository` to inject resources into a Saga. Axon provides a `SpringResourceInjector`, which injects annotated fields and methods with Resources from the Application Context, and a `SimpleResourceInjector`, which injects resources that have been registered with it into `@Inject` annotated methods and fields.
+Saga 인스턴스에 자원을 주입하기 위해 `ResourceInjector`가 사용되며, `ResourceInjector`는 `SagaRepository`에 의해 사용됩니다. Axon은 애플리케이션 컨텍스트로부터 자원을 받아 에노테이션이 사용된 필드와 메서드에 해당 자원을 주입하는 `SpringResourceInjector`과 등록된 자원들을 `@Inject`에노테이션이 사용된 필드와 메서드에 주입하는 `SimpleResourceInjector`를 제공합니다.
 
-> **Tip**
+> **팁**
 >
-> Since resources should not be persisted with the Saga, make sure to add the `transient` keyword to those fields. This will prevent the serialization mechanism to attempt to write the contents of these fields to the repository. The repository will automatically re-inject the required resources after a Saga has been deserialized.
+> 주입해야 할 자원들은 Saga와 함께 영속화하면 안 되기 때문에, `transient` 키워드를 해당 자원 필드에 반드시 사용해야 합니다. 이렇게 하면, 해당 필드의 내용을 저장소(repository)에 저장하기 위한 직렬화 메커니즘을 방지할 수 있습니다. 저장소는 Saga가 역 직렬화된 이후, 자동으로 필요한 자원을 다시 주입합니다.
 
-The `SimpleResourceInjector` allows for a pre-specified collection of resources to be injected. It scans the (setter) methods and fields of a Saga to find ones that are annotated with `@Inject`.
+`SimpleResourceInjector`는 주입되어야 할 자원의 묶음(collection)을 미리 정의하는 것을 허용합니다. `SimpleResourceInjector`는 Saga의 메서드(setter)와 필드를 스캔하여 `@Inject` 에노테이션이 사용된 필드와 메서드를 찾게 됩니다.
 
-When using the Configuration API, Axon will default to the `ConfigurationResourceInjector`. It will inject any resource available in the Configuration. Components like the `EventBus`, `EventStore`, `CommandBus` and `CommandGateway` are available by default, but you can also register your own components using `configurer.registerComponent()`.
+설정 API를 사용할 경우, Axon은 `ConfigurationResourceInjector`를 기본으로 사용합니다. `ConfigurationResourceInjector`는 설정 객체(Configuration)내의 모든 사용 가능한 자원을 주입할 수 있습니다. `EventBus`, `EventStore`, `CommandBus` 그리고 `CommandGateway`와 같은 컴포넌트들을 기본적으로 `ConfigurationResourceInjector`을 통해 주입할 수 있으며, 주입이 필요한 컴포넌트들은 `configurer.registerComponent()` 메서드를 사용하여 주입할 수 있도록 등록할 수 있습니다.
 
-The `SpringResourceInjector` uses Spring's dependency injection mechanism to inject resources into an aggregate. This means you can use setter injection or direct field injection if you require. The method or field to be injected needs to be annotated in order for Spring to recognize it as a dependency, for example with `@Autowired`.
+`SpringResourceInejctor`는 스프링의 의존성 주입 메커니즘을 사용하여 aggregate에 필요한 자원을 주입합니다. 다시 말해, 필요한 자원을 필드에 직접 주입하거나 setter 메서드를 통한 주입을 사용할 수 있습니다. 주입이 필요한 메서드 혹은 필드는 필요한 자원을 스프링이 주입할 수 있도록 `@Autowired`와 같은 에노테이션을 사용해야 합니다.
 
-Saga Infrastructure
+Saga를 위한 기반구조
 ===================
 
-Events need to be redirected to the appropriate Saga instances. To do so, some infrastructure classes are required. The most important components are the `SagaManager` and the `SagaRepository`.
+이벤트를 적절한 Saga 인스턴스에 전송해야 합니다. 이를 위해, 몇 가지 기반구조(infrastructure)를 구성하는 클래스들이 필요합니다. 가장 중요한 컴포넌트는 `SagaManager`와 `SagaRepository`입니다.
 
-Saga Manager
+사가 매니져
 ------------
 
-Like any component that handles Events, the processing is done by an Event Processor. However, since Sagas aren't singleton instances handling Events, but have individual life cycles, they need to be managed. 
+이벤트를 처리하는 다른 컴포넌트들처럼, 이벤트 처리는 이벤트 프로세서(processor)에 의해 처리됩니다. 하지만 Saga들은 싱글 톤(singleton) 인스턴스가 아니고 개별적인 생애 주기를 가지기 때문에, 별도의 관리가 필요합니다.
 
-Axon supports life cycle management through the `AnnotatedSagaManager`, which is provided to an Event Processor to perform the actual invocation of handlers. It is initialized using the type of the Saga to manage, as well as a SagaRepository where Sagas of that type can be stored and retrieved. A single `AnnotatedSagaManager` can only manage a single Saga type.
+Axon은 `AnnotatedSagaManager`를 통해 Saga 인스턴스의 생애 주기를 관리 하도록 지원합니다. `AnnotatedSagaManager`은 이벤트 처리를 위한 실제 인스턴스를 호출하기 위해, 이벤트 프로세서로 전달해 주어야 합니다. (* EventProcessor의 구현체인 `SubscribingEventProcessor` 혹은 `TrackingEventProcessor`의 생성자를 보면 `EventHandlerInvoker`를 인자로 받는 것을 볼 수 있습니다. 그리고 `AnnotatedSagaManager`는 `EventHandlerInvoker`의 하위 타입입니다.) `AnnotatedSagaManager`는 관리할 Saga의 타입을 사용해 초기화되며, Saga 유형을 저장하고 검색할 수 있는 Saga 레퍼지토리도 필요로 합니다. 하나의 `AnnotatedSagaManager`는 오로지 하나의 Saga 유형을 관리할 수 있습니다.
 
-When using the Configuration API, Axon will use sensible defaults for most components. However, it is highly recommended to define a `SagaStore` implementation to use. The `SagaStore` is the mechanism that 'physically' stores the Saga instances somewhere. The `AnnotatedSagaRepository` (the default) uses the `SagaStore` to store and retrieve Saga instances as they are required.
+설정 API를 사용할 경우, Axon은 인지할 수 있는 대부분 컴포넌트에 대한 기본값을 사용합니다. 하지만 `SagaStore`의 구현체를 정의하여 사용하는 것을 권장합니다. `SagaStore`는 Saga 인스턴스를 '물리적인' 저장소에 저장하는 메커니즘입니다. 기본으로 사용되는 `AnnotatedSagaRepository`는 Saga 인스턴스를 저장하고 필요에 따라 저장된 Saga 인스턴스를 반환하기 위해 `SagaStore`를 사용합니다.
 
 ```java
 Configurer configurer = DefaultConfigurer.defaultConfiguration();
 configurer.registerModule(
         SagaConfiguration.subscribingSagaManager(MySagaType.class)
-                         // Axon defaults to an in-memory SagaStore, defining another is recommended
+                         // Axon은 메모리 기반 SagaStore를 기본으로 사용하지만, 다른 SagaStore를 사용하는 것을 권장합니다.
                          .configureSagaStore(c -> new JpaSagaStore(...)));
 
-// alternatively, it is possible to register a single SagaStore for all Saga types:
+// 다른 방법으로, 모든 Saga 유형에 대해 단일 SagaStore를 등록하는것도 가능합니다.
 configurer.registerComponent(SagaStore.class, c -> new JpaSagaStore(...));
 ```
 
-Saga Repository and Saga Store
+사가 레퍼지토리와 사가 스토어
 ------------------------------
 
-The `SagaRepository` is responsible for storing and retrieving Sagas, for use by the `SagaManager`. It is capable of retrieving specific Saga instances by their identifier as well as by their Association Values.
+`SagaManager`는 Saga들을 저장하고 반환하는 역할을 하는 `SagaRepository`를 필요로 합니다. `SagaRepository`는 Saga 인스턴스들의 식별자 그리고 Saga 인스턴스와 연관된 값들을 포함한 Saga 인스턴스를 반환합니다.
 
-There are some special requirements, however. Since concurrency handling in Sagas is a very delicate procedure, the repository must ensure that for each conceptual Saga instance (with equal identifier) only a single instance exists in the JVM.
+그런데 `SagaRepository`에 특별히 필요한 사항들이 있습니다. Saga들에 대한 동시성 처리는 매우 깨지기 쉬우므로, 레포지토리는 식별자의 동치로 구분되는 같은 Saga 유형의 인스턴스는 반드시 JVM 상에 단 하나만 존재하도록 보장해야 합니다. 즉, 같은 식별자를 가지는 Saga 인스턴스는 반드시 하나만 존재해야 합니다. 이때 동일 여부는 식별자의 `equals`메서드로 판단합니다.
 
-Axon provides the `AnnotatedSagaRepository` implementation, which allows the lookup of Saga instances while guaranteeing that only a single instance of the Saga is accessed at the same time. It uses a `SagaStore` to perform the actual persistence of Saga instances.
+Axon은 `AnnotatedSagaRepository` 구현체를 제공합니다. `AnnotatedSagaRepository`는 Saga 인스턴스를 조회하고 동일 시점에 단일 Saga 인스턴스에 접근하도록 합니다. `AnnotatedSagaRepository`는 Saga 인스턴스의 영속화를 `SagaStore`를 통해 수행합니다.
 
-The choice for the implementation to use depends mainly on the storage engine used by the application. Axon provides the `JdbcSagaStore`, `InMemorySagaStore`, `JpaSagaStore` and `MongoSagaStore`. 
+애플리케이션에서 사용하는 저장 엔진에 따라 구현체를 선택하여 사용합니다. Axon에서 제공하는 `JdbcSagaStore`, `InMemorySagaStore`, `JpaSagaStore` 그리고 `MongoSagaStore`를 사용할 수 있습니다.
 
-In some cases, applications benefit from caching Saga instances. In that case, there is a `CachingSagaStore` which wraps another implementation to add caching behavior. Note that the `CachingSagaStore` is a write-through cache, which means save operations are always immediately forwarded to the backing Store, to ensure data safety.
+경우에 따라, Saga 인스턴스를 캐싱하여 사용하는 것이 더 좋을 수 있습니다. 이 경우, 캐싱 기능을 사용하기 위해 다른 구현체를 기반으로 `CachingSagaStore`를 사용할 수 있습니다. `CachingSagaStore`는 생성자에서 `delegate`라는 SagaStore의 구현체를 인자로 받습니다. `delegate`로 Axon에서 제공하는 `JdbcSagaStore`, `InMemorySagaStore`, `JpaSagaStore` 그리고 `MongoSagaStore`과 같은 `SagaStore`의 구현체를 사용하면 됩니다. `CachingSagaStore`는 연속 기재 (write-through) 캐시입니다. 다시 말해, 데이터 안전성을 보장하기 위해 저장 작업이 즉시 백업 저장소로 즉시 전달됩니다.
 
-### JpaSagaStore
-The `JpaSagaStore` uses JPA to store the state and Association Values of Sagas. Sagas themselves do not need any JPA annotations; Axon will serialize the sagas using a `Serializer` (similar to Event serialization, you can use either a `JavaSerializer` or an `XStreamSerializer`).
+### JPA 기반의 사가 스토어(JpaSagaStore)
+`JpaSagaStore`는 Saga의 상태와 연결 값들을 저장하기 위해 JPA를 사용합니다. Saga 자체에 JPA 에노테이션들을 사용할 필요는 없습니다. Axon은 `Serializer`를 사용하여 Saga들을 직렬화 합니다. (이벤트 직렬화와 비슷하게, `JavaSerializer` 혹은 `XStreamSerializer`를 사용할 수 있습니다.)
 
-The `JpaSagaStore` is configured with an `EntityManagerProvider`, which provides access to an `EntityManager` instance to use. This abstraction allows for the use of both application managed and container managed `EntityManager`s. Optionally, you can define the serializer to serialize the Saga instances with. Axon defaults to the `XStreamSerializer`.
+`JpaSagaStore`는 `EntityManager` 인스턴스에 대한 접근을 제공하는 `EntityManagerProvider`와 함께 설정되어야 합니다. 이런 추상화를 통해 애플리케이션에서 관리되거나 컨테이너에서 관리되는 `EntityManager`들을 사용할 수 있습니다. 선택적으로, Saga 인스턴스를 직렬화 하기 위한 시리얼라이져(serializer)를 정의하여 사용할 수 있으며, Axon에서는 `XStreamSerializer`를 기본으로 사용합니다.
 
-### JdbcSagaStore
-The `JdbcSagaStore` uses plain JDBC to store stage instances and their association values. Similar to the `JpaSagaStore`, Saga instances don't need to be aware of how they are stored. They are serialized using a Serializer.
+### JDBC 기반의 사가 스토어(JdbcSagaStore)
+`JdbcSagaStore`는 Saga의 상태와 연결 값들을 저장하기 위해 일반 JDBC를 사용합니다. `JpaSagaStore`와 비슷하게, Saga 인스턴스는 자신들이 어떻게 저장이 되는지에 대해 신경 쓸 필요는 없습니다. Saga 인스턴스들은 시리얼라이져(serializer)를 통해 직렬화됩니다.  
 
-The `JdbcSagaStore` is initialized with either a `DataSource` or a `ConnectionProvider`. While not required, when initializing with a `ConnectionProvider`, it is recommended to wrap the implementation in a `UnitOfWorkAwareConnectionProviderWrapper`. It will check the current Unit of Work for an already open database connection, to ensure that all activity within a unit of work is done on a single connection.
+`JdbcSagaStore`는 `DataSource` 혹은 `ConnectionProvider`과 함께 초기화 됩니다. 반드시 필요하진 않지만, `JdbcSagaStore`를 `ConnectionProvider`와 함께 초기화 할 때, `UnitOfWorkAwareConnectionProviderWrapper`로 `ConnectionProvider`구현체를 한번 감싸서 `UnitOfWorkAwareConnectionProviderWrapper`를 `ConnectionProvider`로 사용하는 것을 권장합니다. 이렇게 하면, 현재의 작업 단위(Unit of Work)에 연결된 데이터베이스 연결(connection)이 있는지 확인하여 작업 단위 내의 모든 작업이 단일 연결로 처리되는 것을 보장할 수 있습니다.
 
-Unlike JPA, the JdbcSagaRepository uses plain SQL statement to store and retrieve information. This may mean that some operations depend on the Database specific SQL dialect. It may also be the case that certain Database vendors provide non-standard features that you would like to use. To allow for this, you can provide your own `SagaSqlSchema`. The `SagaSqlSchema` is an interface that defines all the operations the repository needs to perform on the underlying database. It allows you to customize the SQL statement executed for each one of them. The default is the `GenericSagaSqlSchema`. Other implementations available are `PostgresSagaSqlSchema`, `Oracle11SagaSqlSchema` and `HsqlSagaSchema`.
+JPA와는 달리, JdbcSagaRepository(* 3. x에서 더는 사용되지 않는 것으로 보이고 SagaSqlSchema를 대신 사용하는 것으로 보입니다.)는 Saga에 대한 정보를 저장하고 조회하기 위해 일반적인 SQL 구문을 사용합니다. 따라서 몇몇 질의 작업은 데이터베이스에 의존적인 SQL 문법을 사용해야 합니다. 또한, 특정 데이터베이스 공급 업체가 제공하는 비표준 기능을 사용하고자 하는 경우가 있습니다. 이런 경우에 대처하기 위해, 직접 `SagaSqlSchema` 구현체를 작성하여 `JdbcSagaStore`에 제공할 수 있습니다. `SagaSqlSchema`는 기반 데이터베이스위에서 레포지토리가 필요로 하는 모든 작업을 정의한 인터페이스로, 개별 작업에 사용되는 SQL 구문을 재정의하여 사용할 수 있도록 합니다. `SagaSqlSchema`의 기본 구현체는 `GenericSagaSqlSchema`이며, 그 외에 `PostgressSagaSqlSchema`, `Oracle11SagaSqlSchema` 그리고 `HsqlSagaSchema`들이 있습니다.
 
-### MongoSagaStore
-The `MongoSagaStore` stores the Saga instances and their associations in a MongoDB database. The `MongoSagaStore` stores all sagas in a single Collection in a MongoDB database. Per Saga instance, a single document is created.
+### MongoDB 기반의 사가 스토어(MongoSagaStore)
+이름에서 알 수 있듯이, `MongoSagaStore`는 MongoDB 데이터베이스를 대상으로 Saga의 상태와 연결 값들을 저장합니다. `MongoSagaStore`는 모든 사가(Saga)를 MongoDB 데이터베이스의 하나의 컬렉션(collection)에 저장하며 사가 인스턴스 당 하나의 도큐먼트(document)가 생성됩니다.
 
-The `MongoSagaStore` also ensures that at any time, only a single Saga instance exists for any unique Saga in a single JVM. This ensures that no state changes are lost due to concurrency issues.
+`MongoSagaStore`는 또한, 고유한 식별자를 가지는 단일 Saga 인스턴스가 JVM 상에 존재하도록 보장합니다. 따라서 동시성 문제로 인해 상태 값을 잃어버리지 않도록 보장해 줍니다.
 
-The `MongoSagaStore` is initialized using a `MongoTemplate` and optionally a `Serializer`. The `MongoTemplate` provides a reference to the collection to store the Sagas in. Axon provides the `DefaultMongoTemplate`, which takes the `MongoClient` instance as well as the database name and name of the collection to store the sagas in. The database name and collection name may be omitted. In that case, they default to "axonframework" and "sagas", respectively. 
+`MongoSagaStore`는 `MongoTemplate`과 선택적으로 `Serializer`를 사용하여 초기화됩니다. `MongoTemplate`은 Saga를 저장하는 컬렉션에 대한 참조를 제공합니다. Axon은 `MongoClient`와 데이터베이스 이름, 그리고 Saga들이 저장되는 컬렉션 이름이 있어야 하는 `DefaultMongoTemplate`을 제공합니다. 데이터베이스 이름과 컬렉션 이름은 생략할 경우, 데이터베이스 이름으로 "axonframework"가 사용되며 컬렉션 이름으로 "sagas"를 사용합니다.
 
-Caching
+캐싱
 -------
 
-If a database backed Saga Storage is used, saving and loading Saga instances may be a relatively expensive operation. Especially in situations where the same Saga instance is invoked multiple times within a short time span, a cache can be beneficial to the application's performance.
+Saga 스토리지(storage)로 데이터베이스를 사용할 경우, Saga 인스턴스를 저장하고 조회하는 것은 상대적으로 비용이 많이 드는 작업입니다. 특히 짧은 시간 동안 같은 Saga 인스턴스를 조회하는 상황에선, 캐시를 사용하는 것이 애플리케이션의 성능 향상에 많은 도움이 될 수 있습니다.
 
-Axon provides the `CachingSagaStore` implementation. It is a `SagaStore` that wraps another one, which does the actual storage. When loading Sagas or Association Values, the `CachingSagaStore` will first consult its caches, before delegating to the wrapped repository. When storing information, all calls are always delegated, to ensure that the backing storage always has a consistent view on the Saga's state.
+Axon은 `CachingSagaStore`의 구현체를 제공하며, `CachingSagaStore`는 실제 Saga 저장소 역할을 하는 다른 `SagaStore` 구현체의 래퍼(wrapper)입니다. Saga 혹은 연결 값을 로딩할 때, `CachingSagaStore`는 먼저 자신 내부의 캐시를 검색하고 캐시가 해당 객체를 가지고 있지 않으면 delegate로 전달받은 사가 스토어를 통해 필요한 객체를 반환받습니다. Saga 인스턴스를 저장할 때, delegate로 전달받은 사가 스토어가 일관된 Saga의 상태를 가질 수 있도록 해당 사가 스토어에 저장 작업을 위임합니다.
 
-To configure caching, simply wrap any `SagaStore` in a `CachingSagaStore`. The constructor of the `CachingSagaStore` takes three parameters: the repository to wrap and the caches to use for the Association Values and Saga instances, respectively. The latter two arguments may refer to the same cache, or to different ones. This depends on the eviction requirements of your specific application.
+캐시를 설정하기 위해선, 간단히 `SagaStore` 구현체를 `CachingSagaStore`에 전달해주면 됩니다. `CachingSagaStore`의 생성자는 세 개의 매개변수를 받습니다. 첫 번째 매개변수는 사가 스토어이며, 두번째 매개변수는 연결 값에 대한 캐시 그리고 마지막 매개변수는 Saga에 대한 캐시입니다. 애플리케이션에 따라서 두 번째와 세 번째 인자들은 같은 캐시 객체 혹은 다른 캐시 객체를 참조할 수도 있습니다.
