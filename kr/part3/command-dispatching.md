@@ -1,99 +1,101 @@
-Command Dispatching
+명령 전달 하기
 ===================
 
-The use of an explicit command dispatching mechanism has a number of advantages. First of all, there is a single object that clearly describes the intent of the client. By logging the command, you store both the intent and related data for future reference. Command handling also makes it easy to expose your command processing components to remote clients, via web services for example. Testing also becomes a lot easier, you could define test scripts by just defining the starting situation (given), command to execute (when) and expected results (then) by listing a number of events and commands (see [Testing](../part2/testing.md)). The last major advantage is that it is very easy to switch between synchronous and asynchronous as well as local versus distributed command processing.
+명시적인 명령 전달 메커니즘을 사용하면 좋은 점들이 있습니다. 그 중 첫 번째는 클라이언트의 의도를 명확히 묘사하는 단일 객체가 있다는 것입니다. 명령을 로깅 하여, 클라이언트의 의도와 관련 데이터들을 나중에 사용할 목적으로 저장할 수 있습니다. 명령 처리를 통해 예를 들어 웹 서비스 등을 통해 원격의 클라이언트에게 명령 처리 컴포넌트를 쉽게 노출 시킬 수 있습니다. 시작 상황(given), 실행할 명령(when) 그리고 기대 결과(then)로 이벤트들과 명령들을 열거하는 형식으로 테스트 스크립트를 정의할 수 있어서 테스트를 더 쉽게 수행할 수 있습니다([테스트](../part2/testing.md)를 참고하세요). 마지막 주요 이점은 동기와 비동기 간 변경뿐만 아니라 로컬 기반 명령 처리를 분산 환경의 명령 처리로의 변경을 매우 쉽게 처리할 수 있다는 것입니다.
 
 This doesn't mean Command dispatching using explicit command object is the only way to do it. The goal of Axon is not to prescribe a specific way of working, but to support you doing it your way, while providing best practices as the default behavior. It is still possible to use a Service layer that you can invoke to execute commands. The method will just need to start a unit of work (see [Unit of Work](../part1/messaging-concepts.md#unit-of-work)) and perform a commit or rollback on it when the method is finished.
 
-The next sections provide an overview of the tasks related to setting up a Command dispatching infrastructure with the Axon Framework.
+명시적인 명령 객체를 사용한 명령 전달 처리만이 위와 같은 처리를 하는데 유일한 방법은 아닙니다. Axon의 목적은 특정 방법을 규정하는 것이 아니라 기본적 구현으로서 모범 사례를 제공하면서 사용자 나름의 방법을 지원하는 것입니다. 따라서 명령 실행을 위한 서비스 계층(layer)을 사용할 수 있으며 서비스 계층의 메서드는 작업 단위를 시작하고([작업 단위](../part1/messaging-concepts.md#unit-of-work)를 참고하세요) 메서드의 종료에 따라서 커밋 혹은 롤백을 수행합니다.
 
-The Command Gateway
+다음 장에서는, Axon Framework을 사용하여 명령 전달 기반 구조의 구성과 관련된 작업의 개요를 살펴볼 것입니다.
+
+커멘드 게이트웨이
 ===================
 
-The Command Gateway is a convenient interface towards the Command dispatching mechanism. While you are not required to use a Gateway to dispatch Commands, it is generally the easiest option to do so.
+커멘드 게이트웨이는 명령 전달 메커니즘에 대한 인터페이스입니다. 명령을 전달하기 위해 게이트웨이를 사용할 필요는 없지만, 일반적으로 게이트웨이를 사용하는 것이 가장 쉬운 방법입니다.
 
-There are two ways to use a Command Gateway. The first is to use the `CommandGateway` interface and the `DefaultCommandGateway` implementation provided by Axon. The command gateway provides a number of methods that allow you to send a command and wait for a result either synchronously, with a timeout or asynchronously.
+커멘드 게이트웨이를 사용하기 위한 두 가지 방법 중, 첫 번째 방법은 Axon에서 제공하는 `CommandGateway` 인터페이스와 `DefaultCommandGateway` 구현체를 사용하는 것입니다. Command Gateway를 통해 명령을 전송하고 결과를 동기적으로 기다리도록 처리할 수 있고, 시간제한 및 비동기적으로도 처리할 수 있습니다.
 
-The other option is perhaps the most flexible of all. You can turn almost any interface into a Command Gateway using the `CommandGatewayFactory`. This allows you to define your application's interface using strong typing and declaring your own (checked) business exceptions. Axon will automatically generate an implementation for that interface at runtime.
+다음으로 사용할 수 있는 가장 유연한 방법으로, `CommandGateWayFactory`를 사용하여 거의 모든 인터페이스를 Command Gateway로 변경하는 방법입니다. 정확한 타입 정보와 비즈니스 관련 예외를 사용하여 정의된 애플리케이션 인터페이스를 정의하여, Axon을 통해 해당 인터페이스를 런타임(실행 시점)에 자동으로 해당 인터페이스에 대한 구현체를 생성할 수 있습니다.
 
-Configuring the Command Gateway
+커멘드 게이트웨이 설정하기
 -------------------------------
 
-Both your custom gateway and the one provided by Axon need to be configured with at least access to the Command Bus. In addition, the Command Gateway can be configured with a `RetryScheduler`, `CommandDispatchInterceptor`s, and `CommandCallback`s.
+사용자 정의 게이트웨이와 Axon에서 제공되는 게이트웨이 모두 커맨드 버스(command bus)에 접근할 수 있도록 설정이 필요합니다. 또한, 커맨드 게이트웨이는 `RetryScheduler`, `CommandDispatchInterceptor` 그리고 `CommandCallback`을 통한 설정을 해야 합니다.
 
-The `RetryScheduler` is capable of scheduling retries when command execution has failed. The `IntervalRetryScheduler` is an implementation that will retry a given command at set intervals until it succeeds, or a maximum number of retries is done. When a command fails due to an exception that is explicitly non-transient, no retries are done at all. Note that the retry scheduler is only invoked when a command fails due to a `RuntimeException`. Checked exceptions are regarded "business exception" and will never trigger a retry. Typical usage of a `RetryScheduler` is when dispatching commands on a Distributed Command Bus. If a node fails, the Retry Scheduler will cause a command to be dispatched to the next node capable of processing the command (see [Distributing the Command Bus](#distributing-the-command-bus)).
+`RetryScheduler`을 통해 명령 실행이 실패했을 경우, 명령 처리에 대한 재시도에 대한 스케쥴링을 할 수 있습니다. `RetryScheduler`의 구현체인 `IntervalRetryScheduler`를 통해, 명령 처리가 성공할 때까지 일정한 간격으로 주어진 명령 처리를 재시도하거나, 최대 재시도 횟수만큼 명령을 처리를 재차 시도할 수 있습니다. 하지만 일시적인 예외가 아닌 예외 사항으로 명령 처리에 실패한 경우에는 재시도는 이루어지지 않습니다. `RetryScheduler`는 명령 처리가 `RuntimeException`으로 실패한 경우에만 호출됩니다. 확인된 예외(Checked exceptions)는 "비즈니스 예외"로 간주하여 절대 재시도를 하지 않습니다. 분산 환경에서 커맨드 버스를 사용하여 명령 처리를 할 때 주도 `RetryScheduler`를 사용합니다. 한 노드가 실패했을 때, `RetryScheduler`를 사용하여 다른 사용 가능한 노드로 해당 명령을 분산하여 명령이 처리될 수 있도록 조치합니다. (참조: [분산 커맨드 버스](#distributing-the-command-bus))
 
-`CommandDispatchInterceptor`s allow modification of `CommandMessage`s prior to dispatching them to the Command Bus. In contrast to `CommandDispatchInterceptor`s configured on the CommandBus, these interceptors are only invoked when messages are sent through this gateway. The interceptors can be used to attach meta data to a command or do validation, for example.
+`CommandDispatchInterceptor`를 통해, 커맨드 버스로 명령이 전달되기 전에 명령 메세지(`CommandMessage`)를 변경할 수 있습니다. `CommandDispatchInterceptor`는 `CommandBus`에 설정이 되지만, 메시지들이 게이트웨이를 통해서 전달되는 경우에만 설정된 인터셉터들은 호출됩니다. 예를 들어, 인터셉터들을 사용하여 메타 데이터를 추가하거나 검증을 수행할 수 있습니다.
 
-The `CommandCallback`s are invoked for each command sent. This allows for some generic behavior for all Commands sent through this gateway, regardless of their type.
+`CommandCallback`은 각각 전송된 명령에 대해 호출이 됩니다. 명령의 타입에 상관없이, 게이트웨이를 통해 전송되는 모든 명령에 대해 일반적인 기능을 수행할 수 있습니다.
 
-Creating a Custom Command Gateway
+사용자 정의 Command Gateway 생성하기
 ---------------------------------
 
-Axon allows a custom interface to be used as a Command Gateway. The behavior of each method declared in the interface is based on the parameter types, return type and declared exception. Using this gateway is not only convenient, it makes testing a lot easier by allowing you to mock your interface where needed.
+Command Gateway를 재정의한 인터페이스를 사용할 수 있습니다. 인터페이스에 정의된 각각의 메서드들은 매개변수, 반환 타입 그리고 선언된 예외 사항으로 어떤 기능을 하는지 알 수 있습니다. 인터페이스로 선언된 게이트웨이를 사용하면 사용의 간편성뿐만 아니라 mock을 사용하여 테스트를 더 쉽게 진행할 수 있도록 해줍니다.
 
-This is how parameters affect the behavior of the CommandGateway:
+다음을 통해 매개변수들이 Command Gateway의 기능(행위)에 어떤 영향을 미치는지 살펴보겠습니다.
 
--   The first parameter is expected to be the actual command object to dispatch.
+-   Command Gateway의 `send`, `sendAndWait` 메서드들의, 첫 번째 매개변수는 전달될 실제 명령 객체이어야 합니다.
 
--   Parameters annotated with `@MetaDataValue` will have their value assigned to the meta data field with the identifier passed as annotation parameter
+-   `@MetadataValue` 에노테이션이 사용된 매개변수의 값은 에노테이션 매개변수로 전달된 식별자를 통해 메타데이터 필드에 할당이 됩니다.
 
--   Parameters of type `MetaData` will be merged with the `MetaData` on the CommandMessage. Meta data defined by latter parameters will overwrite the meta data of earlier parameters, if their key is equal.
+-   `MetaData` 타입의 매개변수는 커멘드 메시지(Command Message)의 `MetaData`와 합쳐지게 되며, 같은 키를 가지는 항목은 이후에 정의된 메타 데이터 항목으로 덮어쓰게 됩니다.
 
--   Parameters of type `CommandCallback` will have their `onSuccess` or `onFailure` invoked after the Command is handled. You may pass in more than one callback, and it may be combined with a return value. In that case, the invocations of the callback will always match with the return value (or exception).
+-   `CommandCallback` 타입의 매개변수는 명령 처리 이후 호출되는 `onSuccess` 혹은 `onFailure` 메서드를 가집니다. 하나 이상의 콜백을 전달할 수 있으며, 처리된 명령과 결과 값을 인자로 콜백 객체에 전달하여 호출합니다.
 
--   The last two parameters may be of types `long` (or `int`) and `TimeUnit`. In that case the method will block at most as long as these parameters indicate. How the method reacts on a timeout depends on the exceptions declared on the method (see below). Note that if other properties of the method prevent blocking altogether, a timeout will never occur.
+-   마지막 두 개의 매개변수들은 각각 `long`(혹은 `int`) 그리고 `TimeUnit` 타입일 것입니다. 이 경우, 매개변수들이 나타내는 시간 동안 해당 메서드는 블럭킹되어 메서드가 완료될 때까지 대기합니다. 타임아웃 발생에 대한 반응 및 처리는 메서드에 선언된 예외에 따라 달라집니다. 메서드의 다른 속성들이 블럭킹을 방지하게 되면, 타임아웃은 절대 발생하지 않습니다.
 
-The declared return value of a method will also affect its behavior:
+메서드에 선언된 반환 타입 또한 아래와 같이 메서드의 행위에 영향을 미칩니다.
 
--   A `void` return type will cause the method to return immediately, unless there are other indications on the method that one would want to wait, such as a timeout or declared exceptions.
+- `Void`반환 타입은 해당 메서드에 타임아웃 혹은 선언된 예외 사항 같은 대기해야 한다는 지시가 없다면, 해당 메서드가 즉시 반환하도록 합니다.
 
--   Return types of `Future`, `CompletionStage` and `CompletableFuture` will cause the method to return immediately. You can access the result of the Command Handler using the `CompletableFuture` instance returned from the method. Exceptions and timeouts declared on the method are ignored.
+- `Future`, `CompletionStage` 그리고 `CompletableFuture`의 반환 타입은 메서드가 즉시 반환되도록 합니다. 메서드가 반환하는 `CompletableFuture` 인스턴스를 통해 명령 처리자의 결과에 접근할 수 있습니다. 메서드에 선언된 예외나 타임아웃은 무시됩니다.
 
--   Any other return type will cause the method to block until a result is available. The result is cast to the return type (causing a ClassCastException if the types don't match).
+- 다른 반환 타입들을 사용하면, 해다 메서드는 사용 가능한 결과가 나올 때까지 블럭킹 되어 결과를 기다리게 됩니다. 결괏값은 반환 타입으로 캐스팅되며, 타입이 맞지 않으면 `ClassCastException`이 발생하게 됩니다.
 
-Exceptions have the following effect:
+메서드에 선언된 예외 사항들은 아래와 같은 영향을 미칩니다.
 
--   Any declared checked exception will be thrown if the Command Handler (or an interceptor) threw an exception of that type. If a checked exception is thrown that has not been declared, it is wrapped in a `CommandExecutionException`, which is a `RuntimeException`.
+- 명령 처리자(혹은 인터셉터)에서 확인된 예외(checked exception)를 던진다면, 같은 예외가 해당 메서드에서도 발생 될 것입니다. 만약 해당 예외를 선언하지 않는다면 발생한 예외는 `RuntimeException`인 `CommandExecutionException`로 감싸져서 발생하게 됩니다.
 
--   When a timeout occurs, the default behavior is to return `null` from the method. This can be changed by declaring a `TimeoutException`. If this exception is declared, a `TimeoutException` is thrown instead.
+- 타임아웃이 발생하면, 해당 메서드는 `null`을 기본으로 반환합니다. `null`을 반환하는 대신, `TimeoutException`을 선언하여 `TimeoutException`을 대신 던지도록 할 수 있습니다.
 
--   When a Thread is interrupted while waiting for a result, the default behavior is to return null. In that case, the interrupted flag is set back on the Thread. By declaring an `InterruptedException` on the method, this behavior is changed to throw that exception instead. The interrupt flag is removed when the exception is thrown, consistent with the java specification.
+- 결과를 기다리는 동안 대기 중인 스레드가 중단(interrupted)된다면, 해당 메서드는 기본적으로 `null`을 반환합니다. 이 경우, 스레드가 중단된 것을 나타내는 값(interrupted flag)을 해당 스레드에 설정합니다. 해당 메서드에 `InterruptedException`을 선언하여, interrupted flag가 설정되는 것 대신 `InterruptedException` 예외를 발생시킬 수 있습니다. 예외가 발생하였을 경우, interrupted flag 값은 Java specification에 따라 삭제됩니다.
 
--   Other Runtime Exceptions may be declared on the method, but will not have any effect other than clarification to the API user.
+- 다른 런 타임 예외들을 메서드에 선언하면, API를 사용하는 사용자에게 설명해 주는 것 외에 다른 효과는 없습니다.
 
-Finally, there is the possibility to use annotations:
+마지막으로, 에노테이션들을 사용할 수 있습니다.
 
--   As specified in the parameter section, the `@MetaDataValue` annotation on a parameter will have the value of that parameter added as meta data value. The key of the meta data entry is provided as parameter to the annotation.
+- `@MetaDataValue` 에노테이션을 사용하여 메타 데이터값들을 메서드의 인자로 받아 볼 수 있습니다. 메타 데이터의 키값은 에노테이션의 매개변수로 선언하여 사용합니다.
 
--   Methods annotated with `@Timeout` will block at most the indicated amount of time. This annotation is ignored if the method declares timeout parameters.
+- `@Timeout` 에노테이션을 메서드에 사용하면, 최대 에노테이션에 지정된 시간만큼 메서드는 블럭킹되어 결과를 기다리게 됩니다. 단 메서드에 타임아웃 매개변수를 선언하면 이 에노테이션은 무시됩니다.
 
--   Classes annotated with `@Timeout` will cause all methods declared in that class to block at most the indicated amount of time, unless they are annotated with their own `@Timeout` annotation or specify timeout parameters.
+- `@Timeout`을 클래스에 사용하면, 해당 클래스에 선언된 모든 메서드들에 해당 에노테이션이 적용됩니다. 따라서 클래스의 모든 메서드들은 최대 에노테이션에 지정된 시간만큼 메서드는 블럭킹되어 결과를 기다리게 됩니다. 단 메서드에 선언된 `@Timeout` 에노테이션이 우선 적용됩니다.
 
 ``` java
 public interface MyGateway {
 
-    // fire and forget
+    // 전송하고 잊어버리는 전략입니다.
     void sendCommand(MyPayloadType command);
 
-    // method that attaches meta data and will wait for a result for 10 seconds
+    // "userId"라는 메터 데이터를 가지고 10초의 타임아웃을 가지는 메서드입니다.
     @Timeout(value = 10, unit = TimeUnit.SECONDS)
     ReturnValue sendCommandAndWaitForAResult(MyPayloadType command,
                                              @MetaDataValue("userId") String userId);
 
-    // alternative that throws exceptions on timeout
+    // 타임아웃이 발생했을때, 예외를 던지는 메서드입니다.
     @Timeout(value = 20, unit = TimeUnit.SECONDS)
     ReturnValue sendCommandAndWaitForAResult(MyPayloadType command)
                          throws TimeoutException, InterruptedException;
 
-    // this method will also wait, caller decides how long
+    // 아래의 메서드를 호출하는 client가 timeout 값을 지정합니다.
     void sendCommandAndWait(MyPayloadType command, long timeout, TimeUnit unit)
                          throws TimeoutException, InterruptedException;
 }
 
-// To configure a gateway:
+// 게이트웨이 설정:
 CommandGatewayFactory factory = new CommandGatewayFactory(commandBus);
-// note that the commandBus can be obtained from the `Configuration` object returned on `configurer.initialize()`.
+// commandBus는 'configurer.buildConfiguration()' 메서드가 반환하는 Configuration객체를 통해 얻을 수 있습니다.
 MyGateway myGateway = factory.createGateway(MyGateway.class);
 ```
 
@@ -252,7 +254,7 @@ The `JGroupsConnector` uses (as the name already gives away) JGroups as the unde
 Since JGroups handles both discovery of nodes and the communication between them, the `JGroupsConnector` acts as both a `CommandBusConnector` and a `CommandRouter`.
 
 > **Note**
-> 
+>
 > You can find the JGroups specific components for the `DistributedCommandBus` in the `axon-distributed-commandbus-jgroups` module.
 
 The JGroupsConnector has four mandatory configuration elements:
@@ -269,7 +271,7 @@ The JGroupsConnector has four mandatory configuration elements:
 >
 > When using a Cache, it should be cleared out when the `ConsistentHash` changes to avoid potential data corruption (e.g. when commands don't specify a `@TargetAggregateVersion` and a new member quickly joins and leaves the JGroup, modifying the aggregate while it's still cached elsewhere.)
 
-Ultimately, the JGroupsConnector needs to actually connect, in order to dispatch Messages to other segments. To do so, call the `connect()` method. 
+Ultimately, the JGroupsConnector needs to actually connect, in order to dispatch Messages to other segments. To do so, call the `connect()` method.
 
 ``` java
 JChannel channel = new JChannel("path/to/channel/config.xml");
@@ -302,10 +304,10 @@ Spring Cloud Connector
 ----------------------
 
 The Spring Cloud Connector setup uses the service registration and discovery mechanism described by [Spring Cloud](http://projects.spring.io/spring-cloud/) for distributing the Command Bus. You are thus left free to choose which Spring Cloud implementation to use to distribute your commands. An example implementations is the Eureka Discovery/Eureka Server combination.
- 
+
  > **Note**
  >
- > The `SpringCloudCommandRouter` uses the Spring Cloud specific `ServiceInstance.Metadata` field to inform all the nodes in the system of its message routing information. It is thus of importance that the Spring Cloud implementation selected supports the usage of the `ServiceInstance.Metadata` field. If the desired Spring Cloud implementation does not support the modification of the `ServiceInstance.Metadata` (e.g. Consul), the `SpringCloudHttpBackupCommandRouter` is a viable solution. See the end of this chapter for configuration specifics on the `SpringCloudHttpBackupCommandRouter`. 
+ > The `SpringCloudCommandRouter` uses the Spring Cloud specific `ServiceInstance.Metadata` field to inform all the nodes in the system of its message routing information. It is thus of importance that the Spring Cloud implementation selected supports the usage of the `ServiceInstance.Metadata` field. If the desired Spring Cloud implementation does not support the modification of the `ServiceInstance.Metadata` (e.g. Consul), the `SpringCloudHttpBackupCommandRouter` is a viable solution. See the end of this chapter for configuration specifics on the `SpringCloudHttpBackupCommandRouter`.
 
 Giving a description of every Spring Cloud implementation would push this reference guide to far. Hence we refer to their respective documentations for further information.
 
@@ -318,7 +320,7 @@ The Spring Cloud Connector setup is a combination of the `SpringCloudCommandRout
 The `SpringCloudCommandRouter` has to be created by providing the following:
 
 - A "discovery client" of type `DiscoveryClient`. This can be provided by annotating your Spring Boot application with `@EnableDiscoveryClient`, which will look for a Spring Cloud implementation on your classpath.
- 
+
 - A "routing strategy" of type `RoutingStrategy`. The `axon-core` module currently provides several implementations, but a function call can suffice as well. If you want to route the Commands based on the 'aggregate identifier' for example, you would use the `AnnotationRoutingStrategy` and annotate the field on the payload that identifies the aggregate with `@TargetAggregateIdentifier`.
 
 Other optional parameters for the `SpringCloudCommandRouter`  are:
@@ -328,7 +330,7 @@ Other optional parameters for the `SpringCloudCommandRouter`  are:
 - A "consistent hash change listener" of type `ConsistentHashChangeListener`. Adding a consistent hash change listener provides you the opportunity to perform a specific task if  new members have been added to the known command handlers set.
 
 The `SpringHttpCommandBusConnector` requires three parameters for creation:
- 
+
 - A "local command bus" of type `CommandBus`. This is the Command Bus implementation that dispatches Commands to the local JVM. These commands may have been dispatched by instances on other JVMs or from the local one.
 
 - A `RestOperations` object to perform the posting of a Command Message to another instance.
@@ -346,7 +348,7 @@ The `SpringCloudCommandRouter` and `SpringHttpCommandBusConnector` should then b
 @EnableDiscoveryClient
 @SpringBootApplication
 public class MyApplication {
-    
+
     public static void main(String[] args) {
         SpringApplication.run(MyApplication.class, args);
     }
@@ -356,17 +358,17 @@ public class MyApplication {
     public CommandRouter springCloudCommandRouter(DiscoveryClient discoveryClient) {
         return new SpringCloudCommandRouter(discoveryClient, new AnnotationRoutingStrategy());
     }
-    
+
     @Bean
     public CommandBusConnector springHttpCommandBusConnector(@Qualifier("localSegment") CommandBus localSegment,
                                                              RestOperations restOperations,
                                                              Serializer serializer) {
         return new SpringHttpCommandBusConnector(localSegment, restOperations, serializer);
     }
-    
+
     @Primary // to make sure this CommandBus implementation is used for autowiring
     @Bean
-    public DistributedCommandBus springCloudDistributedCommandBus(CommandRouter commandRouter, 
+    public DistributedCommandBus springCloudDistributedCommandBus(CommandRouter commandRouter,
                                                                   CommandBusConnector commandBusConnector) {
         return new DistributedCommandBus(commandRouter, commandBusConnector);
     }
@@ -388,7 +390,7 @@ public CommandBus localSegment() {
 
 ##### Spring Cloud Http Back Up Command Router
 
-Internally, the `SpringCloudCommandRouter` uses the `Metadata` map contained in the Spring Cloud `ServiceInstance` to communicate the allowed message routing information throughout the distributed Axon environment. If the desired Spring Cloud implementation however does not allow the modification of the `ServiceInstance.Metadata` field (e.g. Consul), one can choose to instantiate a `SpringCloudHttpBackupCommandRouter` instead of the `SpringCloudCommandRouter`. 
+Internally, the `SpringCloudCommandRouter` uses the `Metadata` map contained in the Spring Cloud `ServiceInstance` to communicate the allowed message routing information throughout the distributed Axon environment. If the desired Spring Cloud implementation however does not allow the modification of the `ServiceInstance.Metadata` field (e.g. Consul), one can choose to instantiate a `SpringCloudHttpBackupCommandRouter` instead of the `SpringCloudCommandRouter`.
 
 The `SpringCloudHttpBackupCommandRouter`, as the name suggests, has a back up mechanism if the `ServiceInstance.Metadata` field does not contained the expected message routing information. That back up mechanism is to provide an HTTP endpoint from which the message routing information can be retrieved and by simultaneously adding the functionality to query that endpoint of other known nodes in the cluster to retrieve their message routing information. As such the back up mechanism functions is a Spring Controller to receive requests at a specifiable endpoint and uses a `RestTemplate` to send request to other nodes at the specifiable endpoint.
 
@@ -398,10 +400,10 @@ To use the `SpringCloudHttpBackupCommandRouter` instead of the `SpringCloudComma
 @Configuration
 public class MyApplicationConfiguration {
     @Bean
-    public CommandRouter springCloudHttpBackupCommandRouter(DiscoveryClient discoveryClient, 
-                                                            RestTemplate restTemplate, 
+    public CommandRouter springCloudHttpBackupCommandRouter(DiscoveryClient discoveryClient,
+                                                            RestTemplate restTemplate,
                                                             @Value("${axon.distributed.spring-cloud.fallback-url}") String messageRoutingInformationEndpoint) {
         return new SpringCloudHttpBackupCommandRouter(discoveryClient, new AnnotationRoutingStrategy(), restTemplate, messageRoutingInformationEndpoint);
     }
 }
-``` 
+```
