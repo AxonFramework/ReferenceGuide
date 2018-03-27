@@ -12,18 +12,18 @@
 
 커멘드 게이트웨이는 명령 전달 메커니즘에 대한 인터페이스입니다. 명령을 전달하기 위해 게이트웨이를 사용할 필요는 없지만, 일반적으로 게이트웨이를 사용하는 것이 가장 쉬운 방법입니다.
 
-커멘드 게이트웨이를 사용하기 위한 두 가지 방법 중, 첫 번째 방법은 Axon에서 제공하는 `CommandGateway` 인터페이스와 `DefaultCommandGateway` 구현체를 사용하는 것입니다. Command Gateway를 통해 명령을 전송하고 결과를 동기적으로 기다리도록 처리할 수 있고, 시간제한 및 비동기적으로도 처리할 수 있습니다.
+커멘드 게이트웨이를 사용하기 위한 두 가지 방법 중, 첫 번째 방법은 Axon에서 제공하는 `CommandGateway` 인터페이스와 `DefaultCommandGateway` 구현체를 사용하는 것입니다. Command Gateway를 통해 명령을 전송한 후에, 결과를 동기적으로 기다리도록 처리할 수 있고, 시간제한 및 비동기적으로도 처리할 수 있습니다.
 
-다음으로 사용할 수 있는 가장 유연한 방법으로, `CommandGateWayFactory`를 사용하여 거의 모든 인터페이스를 Command Gateway로 변경하는 방법입니다. 정확한 타입 정보와 비즈니스 관련 예외를 사용하여 정의된 애플리케이션 인터페이스를 정의하여, Axon을 통해 해당 인터페이스를 런타임(실행 시점)에 자동으로 해당 인터페이스에 대한 구현체를 생성할 수 있습니다.
+다음으로 사용할 수 있는 가장 유연한 방법으로, `CommandGateWayFactory`를 사용하여 거의 모든 인터페이스를 Command Gateway로 변경하는 방법입니다. 정확한 타입 정보와 비즈니스 관련 예외를 사용해서 정의된 애플리케이션 인터페이스를 정의하고, Axon을 통해 해당 인터페이스를 런타임(실행 시점)에 자동으로 해당 인터페이스에 대한 구현체를 생성할 수 있습니다.
 
 커멘드 게이트웨이 설정하기
 -------------------------------
 
-사용자 정의 게이트웨이와 Axon에서 제공되는 게이트웨이 모두 커맨드 버스(command bus)에 접근할 수 있도록 설정이 필요합니다. 또한, 커맨드 게이트웨이는 `RetryScheduler`, `CommandDispatchInterceptor` 그리고 `CommandCallback`을 통한 설정을 해야 합니다.
+사용자 정의 게이트웨이와 Axon에서 제공하는 게이트웨이 모두 커맨드 버스(command bus)에 접근하기 위한 설정이 필요합니다. 또한, 커맨드 게이트웨이는 `RetryScheduler`, `CommandDispatchInterceptor` 그리고 `CommandCallback`을 통해 설정을 해야 합니다.
 
-`RetryScheduler`을 통해 명령 실행이 실패했을 경우, 명령 처리에 대한 재시도에 대한 스케쥴링을 할 수 있습니다. `RetryScheduler`의 구현체인 `IntervalRetryScheduler`를 통해, 명령 처리가 성공할 때까지 일정한 간격으로 주어진 명령 처리를 재시도하거나, 최대 재시도 횟수만큼 명령을 처리를 재차 시도할 수 있습니다. 하지만 일시적인 예외가 아닌 예외 사항으로 명령 처리에 실패한 경우에는 재시도는 이루어지지 않습니다. `RetryScheduler`는 명령 처리가 `RuntimeException`으로 실패한 경우에만 호출됩니다. 확인된 예외(Checked exceptions)는 "비즈니스 예외"로 간주하여 절대 재시도를 하지 않습니다. 분산 환경에서 커맨드 버스를 사용하여 명령 처리를 할 때 주도 `RetryScheduler`를 사용합니다. 한 노드가 실패했을 때, `RetryScheduler`를 사용하여 다른 사용 가능한 노드로 해당 명령을 분산하여 명령이 처리될 수 있도록 조치합니다. (참조: [분산 커맨드 버스](#distributing-the-command-bus))
+명령 실행이 실패했을 경우 `RetryScheduler`을 통해, 명령 처리에 대한 재시도에 스케쥴링을 할 수 있습니다. `RetryScheduler`의 구현체인 `IntervalRetryScheduler`를 통해, 명령 처리가 성공할 때까지 일정한 간격으로 주어진 명령 처리를 재시도하거나, 최대 재시도 횟수만큼 명령을 처리를 재차 시도할 수 있습니다. 하지만 일시적인 예외가 아닌 예외 사항으로 명령 처리에 실패했을 때, 재시도는 이루어지지 않습니다. `RetryScheduler`는 명령 처리가 `RuntimeException`으로 실패한 경우에만 호출됩니다. 확인된 예외(Checked exceptions)는 "비즈니스 예외"로 간주하여 절대 재시도를 하지 않습니다. 분산 환경에서 커맨드 버스를 사용하여 명령 처리를 할 때 주로 `RetryScheduler`를 사용합니다. 한 노드가 실패했을 때, `RetryScheduler`를 사용해서 다른 사용 가능한 노드로 해당 명령을 분산하여 명령이 처리될 수 있도록 조치합니다. (참조: [분산 커맨드 버스](#커맨드-버스-분산하기))
 
-`CommandDispatchInterceptor`를 통해, 커맨드 버스로 명령이 전달되기 전에 명령 메세지(`CommandMessage`)를 변경할 수 있습니다. `CommandDispatchInterceptor`는 `CommandBus`에 설정이 되지만, 메시지들이 게이트웨이를 통해서 전달되는 경우에만 설정된 인터셉터들은 호출됩니다. 예를 들어, 인터셉터들을 사용하여 메타 데이터를 추가하거나 검증을 수행할 수 있습니다.
+`CommandDispatchInterceptor`를 통해, 커맨드 버스로 명령이 전달되기 전에 명령 메시지(`CommandMessage`)를 변경할 수 있습니다. `CommandDispatchInterceptor`는 `CommandBus`에 설정이 되지만, 메시지들이 게이트웨이를 통해서 전달되는 경우에만 설정된 인터셉터들은 호출됩니다. 예를 들어, 인터셉터들을 사용하여 메타 데이터를 추가하거나 검증을 수행할 수 있습니다.
 
 `CommandCallback`은 각각 전송된 명령에 대해 호출이 됩니다. 명령의 타입에 상관없이, 게이트웨이를 통해 전송되는 모든 명령에 대해 일반적인 기능을 수행할 수 있습니다.
 
@@ -223,7 +223,7 @@ Axon Framework는 JSR 303 Bean Validation 기반 검증을 지원합니다. `@No
 
 위와 같은 경우를 처리하기 위해 `DistributedCommandBus`를 사용합니다. 다른 `CommandBus` 구현체들과는 달리, `DistributedCommandBus`는 어떤 명령 처리자도 호출하지 않고, 다른 JVM 상의 커맨드 버스들을 어려 이어주는 다리(bridge) 역할만 합니다. 각각의 JVM 상에서 동작하는 `DistributedCommandBus`의 개별 인스턴스를 "세그먼트(Segment)"라고 합니다.
 
-![분산 커맨드 버스의 구조](/assets/axon/distributed_command_bus.png)
+![분산 커맨드 버스의 구조](./distributed-command-bus.png)
 
 > **참고**
 >
@@ -293,53 +293,59 @@ connector.connect();
 >
 > 모든 세그먼트가 같은 타입의 명령들에 대한 명령 처리자를 포함하고 있을 필요는 없습니다. 다른 명령 타입에 대해 다른 세그먼트를 함께 사용할 수 있습니다. 분산된 커맨드 버스는 특정 타입의 명령을 처리할 수 있는 세그먼트로 명령을 전달할 수 있는 노드를 항상 선택합니다.
 
-스프링을 사용한다면, `JGroupsConnectorFactoryBean`을 사용하는 것을 고려해 보세요. `JGroupsConnectorFactoryBean`은 애플리케이션 컨텍스트가 시작할 때 자동으로 커넥터에 연결하고, 애플리케이션 컨텍스트가 종료될 때 자동으로 연결을 끊습니다. 또한, 테스트 환경에 대한 합당한 기본값을 사용하고(운영 환경에 배포 가능한 것은 아닙니다.) 구성을 위해 자동 의존성 주입을 합니다.
+스프링을 사용한다면, `JGroupsConnectorFactoryBean`을 사용하는 것을 고려해 보세요. `JGroupsConnectorFactoryBean`은 애플리케이션 컨텍스트가 시작할 때 자동으로 커넥터에 연결하고, 애플리케이션 컨텍스트가 종료될 때 자동으로 연결을 끊습니다. 또한, 테스트 환경에 대한 합당한 기본값을 사용하며(운영 환경에 배포 가능한 것은 아닙니다.) 구성을 위한 의존성 주입을 자동으로 해줍니다.
 
-Spring Cloud Connector
+스프링 클라우드 커넥터
 ----------------------
 
-The Spring Cloud Connector setup uses the service registration and discovery mechanism described by [Spring Cloud](http://projects.spring.io/spring-cloud/) for distributing the Command Bus. You are thus left free to choose which Spring Cloud implementation to use to distribute your commands. An example implementations is the Eureka Discovery/Eureka Server combination.
+분산 커맨드 버스를 구성하기 위해 스프링 클라우드 커넥터 설정은 [스프링 클라우드](http://projects.spring.io/spring-cloud/) 서비스 등록(registration)과 검색 메커니즘을 사용합니다. 명령의 분산 처리를 위해 자유롭게 스프링 클라우드 구현체를 선택할 수 있습니다. Eureka Discovery/Eureka Server의 조합이 하나의 예가 될 수 있습니다.
 
- > **Note**
+ > **참고**
  >
- > The `SpringCloudCommandRouter` uses the Spring Cloud specific `ServiceInstance.Metadata` field to inform all the nodes in the system of its message routing information. It is thus of importance that the Spring Cloud implementation selected supports the usage of the `ServiceInstance.Metadata` field. If the desired Spring Cloud implementation does not support the modification of the `ServiceInstance.Metadata` (e.g. Consul), the `SpringCloudHttpBackupCommandRouter` is a viable solution. See the end of this chapter for configuration specifics on the `SpringCloudHttpBackupCommandRouter`.
+ > `SpringCloudCommandRouter`는 시스템상의 모든 노드가 메시지의 분배(routing) 정보를 알 수 있도록 `ServiceInstance.Metadata`를 사용합니다. 따라서 선택한 스프링 클라우드 구현체가 `ServiceInstance.Metadata` 필드를 지원하는 것이 중요합니다. 만약 사용하고자 하는 스프링 클라우드 구현체가 `ServiceInstance.Metadata`의 변경을 지원하지 않는다면 (예, Consul), `SpringCloudHttpBackupCommandRouter`를 사용하면 됩니다. `SpringCloudHttpBackupCommandRouter`에 대한 세부 설정 사항들은 이번 장의 마지막을 보면 됩니다.
 
-Giving a description of every Spring Cloud implementation would push this reference guide to far. Hence we refer to their respective documentations for further information.
+스프링 클라우드의 모든 구현 내용들을 본 문서에서는 다루지 않기때문에, 더 자세한 정보를 위해서 각각의 문서를 참고하면 됩니다.
 
-The Spring Cloud Connector setup is a combination of the `SpringCloudCommandRouter` and a `SpringHttpCommandBusConnector`, which respectively fill the place of the `CommandRouter` and the `CommandBusConnector` for the `DistributedCommandBus`.
+`CommandRouter`와 `DistributedCommandBus`를 위한 `CommandBusConnector`의 역할을 하는 `SpringCloudCommandRouter`와 `SpringHttpCommandBusConnector`의 조합으로 스프링 클라우드 커넥터의 설정을 할 수 있습니다.
 
-> **Note**
+> **참고**
 >
-> When using the `SpringCloudCommandRouter`, make sure that your Spring application is has heartbeat events enabled. The implementation leverages the heartbeat events published by a Spring Cloud application to check whether its knowledge of all the others nodes is up to date. Hence if heartbeat events are disabled the majority of the Axon applications within your cluster will not be aware of the entire set up, thus posing issues for correct command routing.
+> `SpringCloudCommandRouter`를 사용한다면, 개발한 혹은 개발 중인 스프링 애플리케이션의 허트비트(heartbeat) 이벤트가 활성화되어 있어야 합니다. `SpringCloudCommandRouter`는 스프링 클라우드 애플리케이션이 게시한 허트비트 이벤트를 통해 클러스터 내의 다른 서비스 노드들의 최신 상태를 확인하고 갱신합니다. 따라서, 만약 허트비트 이벤트 기능이 비활성화되어 있다면, 클러스터 내의 대부분의 Axon 애플리케이션들이 전체 클러스터 구성을 인식하지 못하게 되어, 커맨드를 정확하게 라우팅하지 못하게 됩니다.
 
-The `SpringCloudCommandRouter` has to be created by providing the following:
+`SpringCloudCommandRouter`는 다음과 같은 "discovery client", "routing strategy"와 함께 생성해야 합니다.
 
-- A "discovery client" of type `DiscoveryClient`. This can be provided by annotating your Spring Boot application with `@EnableDiscoveryClient`, which will look for a Spring Cloud implementation on your classpath.
+- `DiscoveryClient`타입의 "discovery client"는 스프링부트 애플리케이션을 사용한다면, `@EnableDiscoveryClient` 에노테이션을 사용하여 클래스패스 상에 있는 스프링 클라우드 구현체를 찾아 "discovery client"를 제공 받을 수 있습니다.
 
-- A "routing strategy" of type `RoutingStrategy`. The `axon-core` module currently provides several implementations, but a function call can suffice as well. If you want to route the Commands based on the 'aggregate identifier' for example, you would use the `AnnotationRoutingStrategy` and annotate the field on the payload that identifies the aggregate with `@TargetAggregateIdentifier`.
+- "routing strategy"는 `RoutingStrategy` 타입이며, `axon-core` 모듈에서 현재 다수의 구현체를 제공하며 함수 호출까지도 할 수 있습니다. 예를 들어 'aggregate identifier'를 기준으로 명령을 분배하고자 한다면, `AnnotationRoutingStrategy`를 사용하고 페이로드 객체의 속성 중 aggregate의 식별자로 사용되는 속성에 `@TargetAggregateIdentifier` 에노테이션을 사용해야 합니다.
 
-Other optional parameters for the `SpringCloudCommandRouter`  are:
+`SpringCloudCommandRouter`를 생성할 때 필요한 다른 추가적인 매개변수들은 다음과 같습니다.
 
-- A "service instance filter" of type `Predicate<ServiceInstance>`. This predicate is used to filter out `ServiceInstances` which the `DiscoveryClient` might encounter which by forehand you know will not handle any command messages. This might be useful if you've got several services within the Spring Cloud Discovery Service set up which you do not want to take into account for command handling, ever.  
+- "service instance filter"는 `Predicate<ServiceInstance>` 타입이며, `DiscoveryClient`를 통해 반환되는 `ServiceInstance`들 중 명령 메시지를 처리하지 않는 `ServiceInstance`를 걸러내기 위해 사용됩니다. 따라사 "service instance filter"를 통해 스프링 클라우드 디스커버리 서비스내의 여러 서비스 중 명령 처리를 하지 않는 서비스들을 라우팅 대상에서 제외 시킬 수 있습니다.
 
-- A "consistent hash change listener" of type `ConsistentHashChangeListener`. Adding a consistent hash change listener provides you the opportunity to perform a specific task if  new members have been added to the known command handlers set.
+- "consistent hash change listener"는 `ConsistentHashChangeListener` 타입입니다. "consistent hash change listener"를 추가하여 새로운 멤버인 명령 처리자를 추가할 때 실행할 작업을 "consistent hash change listener"를 통해 실행 할 수 있습니다.
 
-The `SpringHttpCommandBusConnector` requires three parameters for creation:
-
-- A "local command bus" of type `CommandBus`. This is the Command Bus implementation that dispatches Commands to the local JVM. These commands may have been dispatched by instances on other JVMs or from the local one.
-
-- A `RestOperations` object to perform the posting of a Command Message to another instance.
-
-- Lastly a "serializer" of type `Serializer`. The serializer is used to serialize the command messages before they are sent over the wire.
-
-> **Note**
+> **참고**
 >
-> The Spring Cloud Connector specific components for the `DistributedCommandBus` can be found in the `axon-distributed-commandbus-springcloud` module.
+> `ConsistentHash`는 명령 라우터가 주어진 명령을 처리할 수 있는 명령 처리자를 찾는 데 사용되는 구성 요소입니다. 구성원이 되는 명령 처리자는 명령 처리 능력 및 주어진 라우팅 키를 기반으로 선택됩니다. `ConsistentHash`가 지정된 라우팅 키에 대해 멤버를 제공하라는 요청을 받는 경우 멤버십이 변경되지 않는 한 항상 같은 멤버를 반환합니다.
+>
+> `ConsistentHash`는 같은 aggregate를 대상으로 하는 명령을 같은 구성원에게 라우팅하는 데 사용되며, 이 경우 aggregate 식별자는 라우팅 키입니다.
 
-The `SpringCloudCommandRouter` and `SpringHttpCommandBusConnector` should then both be used for creating the `DistributedCommandsBus`. In Spring Java config, that would look as follows:
+`SpringHttpCommandBusConnector`를 생성하기 위해서 다음과 같은 로컬 커맨드 버스, `RestOperations` 그리고 시리얼라이져와 같이 세 개의 매개변수가 있어야 합니다.
+
+- `CommandBus` 타입의 "로컬 커맨드 버스(local command bus)"은 로컬 JVM으로 명령을 전달합니다. 전달된 명령들은 로컬 JVM에서 다른 JVM 상의 인스턴스로 전달될 수 있습니다.
+
+- `RestOperations` 객체는 다른 인스턴스로 명령 메시지를 전달하는 역할을 합니다.
+
+- `Serializer` 타입의 "serializer"는 명령이 전송되기 전에 명령 메시지를 직렬화하는 역할을 합니다.
+
+> **참고**
+>
+> `DistributedCommandBus`에 대한 스프링 클라우드 커넥터 컴포넌트는 `axon-distributed-commandbus-springcloud` 모듈에 포함되어 있습니다.
+
+`SpringCloudCommandRouter`와 `SpringHttpCommandBusConnector`들은 `DistributedCommandBus`를 생성하는데 사용이 됩니다. 스프링에서의 설정 코드는 아래와 같을 수 있습니다.
 
 ```java
-// Simple Spring Boot App providing the `DiscoveryClient` bean
+//  'Discovery Client' 빈을 제공하는 간단한 Spring Boot App 입니다.
 @EnableDiscoveryClient
 @SpringBootApplication
 public class MyApplication {
@@ -348,7 +354,7 @@ public class MyApplication {
         SpringApplication.run(MyApplication.class, args);
     }
 
-    // Example function providing a Spring Cloud Connector
+    // 스프링 클라우드 커넥터를 제공하는 예제 메서드
     @Bean
     public CommandRouter springCloudCommandRouter(DiscoveryClient discoveryClient) {
         return new SpringCloudCommandRouter(discoveryClient, new AnnotationRoutingStrategy());
@@ -361,7 +367,7 @@ public class MyApplication {
         return new SpringHttpCommandBusConnector(localSegment, restOperations, serializer);
     }
 
-    @Primary // to make sure this CommandBus implementation is used for autowiring
+    @Primary // 아래의 CommandBus 구현체가 자동 인젝션(Autowired)에 사용될 수 있도록 하기 위함.
     @Bean
     public DistributedCommandBus springCloudDistributedCommandBus(CommandRouter commandRouter,
                                                                   CommandBusConnector commandBusConnector) {
@@ -371,7 +377,7 @@ public class MyApplication {
 }
 ```
 ``` java
-// if you don't use Spring Boot Autoconfiguration, you will need to explicitly define the local segment:
+// Spring Boot의 자동 설정을 사용하지 않는다면, 명시적으로 로컬 세그먼트를 정의해줘야 합니다.
 @Bean
 @Qualifier("localSegment")
 public CommandBus localSegment() {
@@ -379,17 +385,17 @@ public CommandBus localSegment() {
 }
 
 ```
-> **Note**
+> **참고**
 >
-> Note that it is not required that all segments have Command Handlers for the same type of Commands. You may use different segments for different Command Types altogether. The Distributed Command Bus will always choose a node to dispatch a Command to that has support for that specific type of Command.
+> 모든 세그먼트들이 동일 유형의 명령에 대해 처리자를 가질 필요는 없습니다. 각기 다른 명령 타입에 대한 다른 세그먼트를 함께 사용할 수 있습니다. 분산 커맨드 버스는 특정 유형의 명령을 처리할 수 있는 노드를 선택합니다.
 
 ##### Spring Cloud Http Back Up Command Router
 
-Internally, the `SpringCloudCommandRouter` uses the `Metadata` map contained in the Spring Cloud `ServiceInstance` to communicate the allowed message routing information throughout the distributed Axon environment. If the desired Spring Cloud implementation however does not allow the modification of the `ServiceInstance.Metadata` field (e.g. Consul), one can choose to instantiate a `SpringCloudHttpBackupCommandRouter` instead of the `SpringCloudCommandRouter`.
+내부적으로 `SpringCloudCommandRouter`는 스프링 클라우드의 `ServiceInstance`가 가지고 있는 `Metadata` 맵(Map)을 사용합니다. `Metadata` 맵을 사용하여 허용된 메시지 라우팅 정보를 분산된 Axon 환경에 전달합니다. 만약 사용하고자 하는 스프링 클라우드 구현체가 `ServiceInstance.Metadata`의 변경을 지원하지 않는다면 (예, Consul), `SpringCloudCommandRouter`대신 `SpringCloudHttpBackupCommandRouter`를 사용하면 됩니다.
 
-The `SpringCloudHttpBackupCommandRouter`, as the name suggests, has a back up mechanism if the `ServiceInstance.Metadata` field does not contained the expected message routing information. That back up mechanism is to provide an HTTP endpoint from which the message routing information can be retrieved and by simultaneously adding the functionality to query that endpoint of other known nodes in the cluster to retrieve their message routing information. As such the back up mechanism functions is a Spring Controller to receive requests at a specifiable endpoint and uses a `RestTemplate` to send request to other nodes at the specifiable endpoint.
+`SpringCloudHttpBackupCommandRouter`는 이름에서 알 수 있듯이, `ServiceInstance.Metadata` 필드가 예상하는 메시지 라우팅 정보를 가지고 있지 않았을 때에 대한 백업 메커니즘을 가지고 있습니다. 해당 백업 메커니즘은 메시지 라우팅 정보에서 뽑아낸 HTTP 엔드 포인트를 제공하고 이와 동시에 클러스터내의 다른 노드들의 엔드 포인트를 검색하는 기능을 추가합니다. 백업 메커니즘 기능은 지정 가능한 앤드 포인트인 Spring Controller이며, 다른 지정 가능한 앤드 포인트로 요청을 전송하는 `RestTemplate`을 사용합니다.
 
-To use the `SpringCloudHttpBackupCommandRouter` instead of the `SpringCloudCommandRouter`, add the following Spring Java configuration (which replaces the `SpringCloudCommandRouter` method in our earlier example):
+`SpringCloudCommandRouter` 대신 `SpringCloudHttpBackupCommandRouter`를 사용하려면, 이전 예제에서 사용하였던 `SpringCloudCommandRouter`를 다음과 같이 바꿔 주면 됩니다.
 
 ```java
 @Configuration
