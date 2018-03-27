@@ -3,8 +3,6 @@
 
 명시적인 명령 전달 메커니즘을 사용하면 좋은 점들이 있습니다. 그 중 첫 번째는 클라이언트의 의도를 명확히 묘사하는 단일 객체가 있다는 것입니다. 명령을 로깅 하여, 클라이언트의 의도와 관련 데이터들을 나중에 사용할 목적으로 저장할 수 있습니다. 명령 처리를 통해 예를 들어 웹 서비스 등을 통해 원격의 클라이언트에게 명령 처리 컴포넌트를 쉽게 노출 시킬 수 있습니다. 시작 상황(given), 실행할 명령(when) 그리고 기대 결과(then)로 이벤트들과 명령들을 열거하는 형식으로 테스트 스크립트를 정의할 수 있어서 테스트를 더 쉽게 수행할 수 있습니다([테스트](../part2/testing.md)를 참고하세요). 마지막 주요 이점은 동기와 비동기 간 변경뿐만 아니라 로컬 기반 명령 처리를 분산 환경의 명령 처리로의 변경을 매우 쉽게 처리할 수 있다는 것입니다.
 
-This doesn't mean Command dispatching using explicit command object is the only way to do it. The goal of Axon is not to prescribe a specific way of working, but to support you doing it your way, while providing best practices as the default behavior. It is still possible to use a Service layer that you can invoke to execute commands. The method will just need to start a unit of work (see [Unit of Work](../part1/messaging-concepts.md#unit-of-work)) and perform a commit or rollback on it when the method is finished.
-
 명시적인 명령 객체를 사용한 명령 전달 처리만이 위와 같은 처리를 하는데 유일한 방법은 아닙니다. Axon의 목적은 특정 방법을 규정하는 것이 아니라 기본적 구현으로서 모범 사례를 제공하면서 사용자 나름의 방법을 지원하는 것입니다. 따라서 명령 실행을 위한 서비스 계층(layer)을 사용할 수 있으며 서비스 계층의 메서드는 작업 단위를 시작하고([작업 단위](../part1/messaging-concepts.md#unit-of-work)를 참고하세요) 메서드의 종료에 따라서 커밋 혹은 롤백을 수행합니다.
 
 다음 장에서는, Axon Framework을 사용하여 명령 전달 기반 구조의 구성과 관련된 작업의 개요를 살펴볼 것입니다.
@@ -99,179 +97,176 @@ CommandGatewayFactory factory = new CommandGatewayFactory(commandBus);
 MyGateway myGateway = factory.createGateway(MyGateway.class);
 ```
 
-The Command Bus
+커맨드 버스
 ===============
 
-The Command Bus is the mechanism that dispatches commands to their respective Command Handlers. Each Command is always sent to exactly one command handler. If no command handler is available for the dispatched command, a `NoHandlerForCommandException` exception is thrown. Subscribing multiple command handlers to the same command type will result in subscriptions replacing each other. In that case, the last subscription wins.
+커맨드 버스(Command Bus)는 각각의 명령 처리자에게 명령들을 전달하기 위한 메커니즘을 말합니다. 각각의 명령은 정확히 하나의 명령 처리자에게 전달됩니다. 만약 명령을 처리할 처리자가 없다면, `NoHandlerForCommandException`이 발생합니다. 같은 명령 타입에 대해 다수의 명령 처리자를 등록하게 되면, 마지막에 등록한 명령 처리자가 등록되어 해당 명령을 처리하게 됩니다.
 
-Dispatching commands
+명령 전달하기
 --------------------
 
-The CommandBus provides two methods to dispatch commands to their respective handler: `dispatch(commandMessage, callback)` and `dispatch(commandMessage)`. The first parameter is a message containing the actual command to dispatch. The optional second parameter takes a callback that allows the dispatching component to be notified when command handling is completed. This callback has two methods: `onSuccess()` and `onFailure()`, which are called when command handling returned normally, or when it threw an exception, respectively.
+`CommandBus`는 각각의 처리자에게 명령을 전달하기 위한 두 개의 메서드를 제공합니다. 해당 메서드들은 `dispatch(commandMessage, callback)`과 `dispatch(commandMessage)`이며, 두 메서드의 공통된 매개변수이면서 첫 번째 매개변수는 전달될 실제 명령을 포함하고 있습니다. 선택적인 두 번째 매개변수로 전달되는 콜백 객체는 명령 처리가 완료되면 명령을 전송한 컴포넌트에 완료 여부를 알리는 용도로 사용할 수 있습니다. 해당 콜백은 명령 처리가 정상적으로 처리되었을 때 호출되는 `onSuccess`와 예외 발생 등의 상황에서 호출되는 `onFailure` 두 개의 메서드를 가집니다.
 
-The calling component may not assume that the callback is invoked in the same thread that dispatched the command. If the calling thread depends on the result before continuing, you can use the `FutureCallback`. It is a combination of a `Future` (as defined in the java.concurrent package) and Axon's `CommandCallback`. Alternatively, consider using a Command Gateway.
+명령이 전달되는 스레드와 콜백이 호출되는 스레드는 다를 수 있으므로, 호출하는 스레드가 다음 로직을 진행하기 전에 결과를 원한다면, `FutureCallback`을 사용하여 처리할 수 있습니다. `FutureCallback`은 Java의 `java.concurrent` 패키지에 정의된 `Future`와 Axon에서 제공하는 `CommandCallback`의 조합입니다. 다른 대안으로는 커맨드 게이트웨이의 사용을 생각해 볼 수 있습니다.
 
-If an application isn't directly interested in the outcome of a Command, the `dispatch(commandMessage)` method can be used.
+만약 명령 처리의 결과에 관심이 없다면, `dispatch(commandMessage)` 메서드를 사용하면 됩니다.
 
-SimpleCommandBus
+심플 커맨드 버스(SimpleCommandBus)
 ----------------
 
-The `SimpleCommandBus` is, as the name suggests, the simplest implementation. It does straightforward processing of commands in the thread that dispatches them. After a command is processed, the modified aggregate(s) are saved and generated events are published in that same thread. In most scenarios, such as web applications, this implementation will suit your needs. The `SimpleCommandBus` is the implementation used by default in the Configuration API.
+`SimpleCommandBus`는 이름에서 알 수 있듯이, 가장 간단한 `CommandBus`의 구현체입니다. 명령들을 전송하는 스레드에서 곧장 명령들을 처리합니다. 명령이 처리되고 난 후에, 변경된 aggregate(들)은 저장되고 발생한 이벤트들은 같은 스레드에서 게시됩니다. 웹 애플리케이션과 같은 대부분은 `SimpleCommandBus`만으로도 충분하며, 설정 API에서 기본적으로 사용되는 구현체이기도 합니다.
 
-Like most `CommandBus` implementations, the `SimpleCommandBus` allows interceptors to be configured. `CommandDispatchInterceptor`s are invoked when a command is dispatched on the Command Bus. The `CommandHandlerInterceptor`s are invoked before the actual command handler method is, allowing you to do modify or block the command. See [Command Interceptors](#command-interceptors) for more information.
+다른 대부분의 `CommandBus` 구현체들처럼, `SimpleCommandBus`에도 인터셉터(interceptor)들을 설정할 수 있습니다. `CommandDispatchInterceptor`는 커맨드 버스에서 명령이 전송될 때 호출이 됩니다. 실제 명령 처리자 메서드를 호출하기 전에 `CommandDispatchInterceptor`를 호출합니다. 따라서 해당 명령을 변경하거나 전송되지 않도록 처리할 수 있습니다. 상세 내용은 [커맨드 인터셉터](#command-interceptors)를 참조하세요.
 
-Since all command processing is done in the same thread, this implementation is limited to the JVM's boundaries. The performance of this implementation is good, but not extraordinary. To cross JVM boundaries, or to get the most out of your CPU cycles, check out the other `CommandBus` implementations.
 
-AsynchronousCommandBus
+모든 명령 처리가 같은 스레드 내에서 이루어지기 때문에, JVM의 한계 내에서 작동하게 됩니다. `SimpleCommandBus`의 성능은 좋지만, 뛰어난 정도는 아닙니다. JVM의 한계를 넘어서거나 CPU 사이클을 최대한 활용하려면, 다른 `CommandBus`의 구현체를 확인해 보세요.
+
+비동기 커맨드 버스 (AsynchronousCommandBus)
 ----------------------
 
-As the name suggest, the `AsynchronousCommandBus` implementation executes Commands asynchronously from the thread that dispatches them. It uses an Executor to perform the actual handling logic on a different Thread.
+이름에서 알수 있듯이, `AsynchronousCommandBus`는 `CommandBus` 의 또 다른 구현체로, 명령을 발송하는 스레드로부터 비동기적으로 명령을 처리합니다. `AsynchronousCommandBus`는 `Executor`를 사용하여 실제 명령 처리 로직을 다른 스레드 상에서 처리합니다.
 
-By default, the `AsynchronousCommandBus` uses an unbounded cached thread pool. This means a thread is created when a Command is dispatched. Threads that have finished processing a Command are reused for new commands. Threads are stopped if they haven't processed a command for 60 seconds.
+기본적으로, `AsynchronousCommandBus`는 개수 제한이 없는 캐시 기반의 스레드 풀(pool)을 사용합니다. 즉, 한 명령이 발송될 때 하나의 스레드가 생성되며, 명령 처리를 완료한 스레드는 새로운 명령들을 처리하기 위해 다시 재사용됩니다. 그리고 60초 동안 아무런 명령을 처리하지 않았다면 스레드들은 멈추게 됩니다.
 
-Alternatively, an `Executor` instance may be provided to configure a different threading strategy.
+다른 방법으로, 다른 스레드 전략을 가지는 `Executor` 인스턴스를 사용할 수 있습니다.
 
-Note that the `AsynchronousCommandBus` should be shut down when stopping the application, to make sure any waiting threads are properly shut down. To shut down, call the `shutdown()` method. This will also shutdown any provided `Executor` instance, if it implements the `ExecutorService` interface.
+주의할 것은, 명령을 기다리는 모든 스레드를 정상적으로 종료하기 위해 `AsynchronousCommandBus`는 애플리케이션이 종료될 때 함께 종료되어야 합니다. `shutdown()` 메서드를 호출하여 `AsynchronousCommandBus`를 종료하면 되고 주어진 `Executor`가 `ExecutorService`의 구현체라면, 함께 종료됩니다.
 
-DisruptorCommandBus
+디스럽터 커맨드버스 (DisruptorCommandBus)
 -------------------
 
-The `SimpleCommandBus` has reasonable performance characteristics, especially when you've gone through the performance tips in [Performance Tuning](../part4/performance-tuning.md#performance-tuning). The fact that the `SimpleCommandBus` needs locking to prevent multiple threads from concurrently accessing the same aggregate causes processing overhead and lock contention.
+`SimpleCommandBus`는 수긍할만한 성능 특성이 있고, 특히 [Performance Tuning](../part4/performance-tuning.md#performance-tuning)의 성능 관련 사항을 살펴보게 될 때 알 수 있을 것입니다. `SimpleCommandBus`는 같은 aggregate에 다수의 스레드가 동시에 접근하는 것을 방지하기 위한 락킹(locking)을 필요로 합니다. 이로 인해 처리 과부하 및 락(lock)을 얻기 위한 경쟁이 발생합니다.
 
-The `DisruptorCommandBus` takes a different approach to multithreaded processing. Instead of having multiple threads each doing the same process, there are multiple threads, each taking care of a piece of the process. The `DisruptorCommandBus` uses the Disruptor (<http://lmax-exchange.github.io/disruptor/>), a small framework for concurrent programming, to achieve much better performance, by just taking a different approach to multi-threading. Instead of doing the processing in the calling thread, the tasks are handed off to two groups of threads, that each take care of a part of the processing. The first group of threads will execute the command handler, changing an aggregate's state. The second group will store and publish the events to the Event Store.
+`DisruptorCommandBus`는 다른 다중 스레드를 처리 방법을 사용합니다. 다수의 스레드가 같은 프로세스를 처리하도록 하는 대신, 각각의 스레드들이 프로세스의 부분 부분을 처리하도록 합니다. `DisruptorCommandBus`는 상당히 향상된 성능을 내는 동시성 프로그래밍을 위한 작은 프레임워크인 [Disruptor](http://lmax-exchange.github.io/disruptor/)를 사용합니다. 호출자의 스레드에서 프로세스를 처리하는 방법 대신, 프로세스의 각 부분을 담당하는 두 그룹의 스레드에 작업을 전달합니다. 첫 번째 그룹의 스레드는 명령 처리자를 호출하고 aggregate의 상태를 변경합니다. 두 번째 그룹은 이벤트들을 저장하고 이벤트 스토어에 이벤트를 게시합니다.
 
-While the `DisruptorCommandBus` easily outperforms the `SimpleCommandBus` by a factor of 4(!), there are a few limitations:
+`SimpleCommandBus`에 비해 `DisruptorCommandBus`는 4! 배 만큼 월등한 성능을 내지만, 몇 가지 제약 사항들이 있습니다.
 
--   The `DisruptorCommandBus` only supports Event Sourced Aggregates. This Command Bus also acts as a Repository for the aggregates processed by the Disruptor. To get a reference to the Repository, use `createRepository(AggregateFactory)`.
+-   `DisruptorCommandBus`는 이벤트 소스 기반의 Aggregate만을 지원합니다. 이 커멘드 버스는 디스럽터(disruptor)가 처리하는 aggregate의 저장소와 같은 역할을 합니다. 저장소에 대한 참조 값은 `createRepository(AggregateFactory)` 메서드를 사용하면 됩니다.
 
--   A Command can only result in a state change in a single aggregate instance.
+-   하나의 명령은 단일 aggregate 인스턴스에 대해서만 상태변경을 할 수 있습니다.
 
--   When using a Cache, it allows only a single aggregate for a given identifier. This means it is not possible to have two aggregates of different types with the same identifier.
+-   캐시를 사용할 경우, 같은 식별 값을 가지는 두 개의 다른 유형의 aggregate를 사용할 수 없습니다. 특정 식별자에 대해 오로지 단일의 aggregate만을 허용하기 때문입니다.
 
--   Commands should generally not cause a failure that requires a rollback of the Unit of Work. When a rollback occurs, the `DisruptorCommandBus` cannot guarantee that Commands are processed in the order they were dispatched. Furthermore, it requires a retry of a number of other commands, causing unnecessary computations.
+-   커맨드 버스를 통해 처리되는 명령은 일반적으로 작업단위의 롤백이 이루어져야 하는 실패를 발생시켜서는 안됩니다. 롤백이 이루어질 경우, `DisruptorCommandBus`는 명령이 전송된 순서와 같은 순서로 처리되는 것을 보장하지 않습니다. 게다가 불필요한 계산을 해야 하는 다른 명령들을 다시 시도해야 합니다.
 
--   When creating a new Aggregate Instance, commands updating that created instance may not all happen in the exact order as provided. Once the aggregate is created, all commands will be executed exactly in the order they were dispatched. To ensure the order, use a callback on the creating command to wait for the aggregate being created. It shouldn't take more than a few milliseconds.
+-   새로운 Aggregate 인스턴스를 생성할 때, 생성된 인스턴스를 갱신하는 명령이 주어진 순서대로 수행되지 않을 수 있습니다. aggregate가 생성되면, 모든 명령은 전달 된 순서대로 정확하게 실행됩니다. 순서대로 처리되도록 보장하려면, aggregate가 생성되기를 기다리도록 하는 콜백을 해당 명령에 사용해야 합니다. 하지만 aggregate는 몇 밀리 초안에 생성되므로 콜백의 처리 또한, 짧은 시간 안에 이루어집니다.
 
-To construct a `DisruptorCommandBus` instance, you need an `EventStore`. This component is explained in [Repositories and Event Stores](repositories-and-event-stores.md).
+`DisruptorCommandBus` 인스턴스를 생성하기 위해선, `EventStore`가 필요합니다. `EventStore`는 [Repositories and Event Store](repositories-and-event-stores.md)에 설명이 되어 있습니다.
 
-Optionally, you can provide a `DisruptorConfiguration` instance, which allows you to tweak the configuration to optimize performance for your specific environment:
+특정 환경하에서 성능에 최적화된 설정을 위해 `DisruptorConfiguration` 인스턴스를 선택적으로 생성하여 `DisruptorCommandBus`에 설정할 수 있습니다. 버퍼 크기, 생산자 유형 및 대기 전략 등의 설정 가능한 항목들은 아래와 같습니다.
 
--   Buffer size: The number of slots on the ring buffer to register incoming commands. Higher values may increase throughput, but also cause higher latency. Must always be a power of 2. Defaults to 4096.
+- 버퍼 크기(Buffer size): 수신 명령을 저장하는 링 버퍼(ring buffer)의 슬롯의 개수를 나타냅니다. 값을 크게 설정하면 출력을 높일 수 있지만, 지연(latency)이 길어질 수 있습니다. 해당 값은 반드시 2의 거듭제곱근이 되어야 합니다. 기본값은 4096입니다.
 
--   ProducerType: Indicates whether the entries are produced by a single thread, or multiple. Defaults to multiple.
+- 생산자 유형(ProducerType): 단일 스레드 혹은 다중 스레드로 엔트리들을 생성할지를 결정하는 값입니다. 기본값은 다중 스레드로 되어 있습니다.
 
--   WaitStrategy: The strategy to use when the processor threads (the three threads taking care of the actual processing) need to wait for each other. The best WaitStrategy depends on the number of cores available in the machine, and the number of other processes running. If low latency is crucial, and the DisruptorCommandBus may claim cores for itself, you can use the `BusySpinWaitStrategy`. To make the Command Bus claim less of the CPU and allow other threads to do processing, use the `YieldingWaitStrategy`. Finally, you can use the `SleepingWaitStrategy` and `BlockingWaitStrategy` to allow other processes a fair share of CPU. The latter is suitable if the Command Bus is not expected to be processing full-time. Defaults to the `BlockingWaitStrategy`.
+- 대기 전략(WaitStrategy): 처리 프로세서 스레드들 간(세 개의 스레드가 실제 처리를 담당합니다.) 다른 스레드의 작업 처리 동안 어떤 방법으로 대기할지에 대한 전략을 설정할 수 있습니다. 가장 좋은 대기 전략은 사용 가능한 코어의 개수와 진행 중인 다른 프로세스들의 개수에 따라 결정이 됩니다. 낮은 지연 시간이 가장 중요하고 `DisruptorCommandBus`가 자신을 위한 코어를 요청해야 한다면, `BusySpinWaitStrategy`를 사용할 수 있습니다. `DisruptorCommandBus`가 적게 CPU를 사용하고 다른 스레드들이 처리할 수 있도록 허용하기 위해선, `YieldingWaitStrategy`를 사용하세요. 마지막으로 다른 스레드들과 공평하게 CPU 사용을 하기 위해서 `SleepingWaitStrategy`와 `BlockingWaitStrategy`를 사용 할 수 있습니다. `BlockingWaitStrategy`는 커맨드 버스가 프로세스 처리를 위해 CPU를 독점적으로 사용하지 않도록 합니다. 기본값은 `BlockingWaitStrategy`입니다.
 
--   Executor: Sets the Executor that provides the Threads for the `DisruptorCommandBus`. This executor must be able to provide at least 4 threads. 3 of the threads are claimed by the processing components of the `DisruptorCommandBus`. Extra threads are used to invoke callbacks and to schedule retries in case an Aggregate's state is detected to be corrupt. Defaults to a `CachedThreadPool` that provides threads from a thread group called "DisruptorCommandBus".
+- 익스큐터(Executor): `DisruptorCommandBus`가 사용할 스레드를 제공해주는 `Executor`를 설정합니다. `Executor`는 최소한 4개의 스레드를 제공해야 하는데, 그중 세 개의 스레드는 `DisruptorCommandBus`의 프로세싱 컴포넌트에 할당이 됩니다. 나머지 스레드들은 콜백을 호출하고 Aggregate의 상태 변경에 문제가 발생하였을때 재시도를 스케쥴링하기 위한 용도로 사용이 됩니다. "DisruptorCommandBus"의 이름을 가진 스레드 그룹으로부터 스레드를 제공하는 `CachedThreadPool`이 기본적으로 사용이 됩니다.
 
--   TransactionManager: Defines the Transaction Manager that should ensure that the storage and publication of events are executed transactionally.
+- 트랜잭션 매니저(TransactionManager): 이벤트의 저장과 게시를 트랜잭션 내에서 처리될 수 있도록 하기 위한 트랜잭션 매니저를 정의합니다. - 인보커-인터셉터스(InvokerInterceptors): 명령 처리자의 호출 과정에서 사용되는 `CommandHandlerInterceptor`들을 정의합니다. 실제 명령 처리자 메서드를 호출하는 과정입니다.
 
--   InvokerInterceptors: Defines the `CommandHandlerInterceptor`s that are to be used in the invocation process. This is the process that calls the actual Command Handler method.
+- 퍼블리셔-인터셉터스(PublisherInterceptors): 발생된 이벤트를 저장하고 게시하는 과정에서 사용되는 `CommandHandlerInterceptor`들을 정의합니다.
 
--   PublisherInterceptors: Defines the `CommandHandlerInterceptor`s that are to be used in the publication process. This is the process that stores and publishes the generated events.
+ - 롤백 설정(RollbackConfiguration): 작업 단위를 롤백해야 하는 예외들을 정의합니다. 기본적으로 메서드에 정의되지 않은 예외(unchecked exception)에 대해 롤백 처리를 하도록 설정되어 있습니다. - 비정상 상태변경 처리를 위한 명령의 리스케쥴링(RescheduleCommandsOnCorruptState): 예를 들어 작업 단위(Unit of Work)가 롤백된 경우와 같이 Aggregate의 상태가 정상적으로 변경되지 않았을때, 이미 처리된 명령을 다시 처리하도록 스케쥴링을 해야 하는지를 결정합니다. `false`로 값을 설정하면, 콜백의 `onFailure()` 메서드가 실행됩니다. 반대로 기본값인 `true`일 경우, 해당 명령은 다시 처리되도록 스케쥴링 됩니다.
 
--   RollbackConfiguration: Defines on which Exceptions a Unit of Work should be rolled back. Defaults to a configuration that rolls back on unchecked exceptions.
+- 쿨링다운 시간(CoolingDownPeriod): 명령들이 모두 처리될 때까지 기다리는 초단위의 시간 값을 설정합니다. 이 시간 동안, 새로운 명령을 받지 않지만, 이미 수신한 명령들은 처리되고 필요에 따라 재처리 되도록 스케쥴링 됩니다. 설정된 시간 동안, 명령에 재처리 스케쥴링과 콜백 호출을 위한 스레드들의 사용을 보장합니다. 기본값은 1000(1초)입니다.
 
--   RescheduleCommandsOnCorruptState: Indicates whether Commands that have been executed against an Aggregate that has been corrupted (e.g. because a Unit of Work was rolled back) should be rescheduled. If `false` the callback's `onFailure()` method will be invoked. If `true` (the default), the command will be rescheduled instead.
+- 캐시(Cache): 이벤트 저장소를 통해 복원된 aggregate 인스턴스들을 저장해놓는 캐시를 설정합니다. 설정된 캐시는 디스럽터(disruptor)가 사용 중이 아닌 aggregate 인스턴스들을 저장합니다.
 
--   CoolingDownPeriod: Sets the number of seconds to wait to make sure all commands are processed. During the cooling down period, no new commands are accepted, but existing commands are processed, and rescheduled when necessary. The cooling down period ensures that threads are available for rescheduling the commands and calling callbacks. Defaults to 1000 (1 second).
+- 명령 처리자 호출 스레드 개수(InvokerThreadCount) : 명령 처리자를 호출하는데 사용되는 스레드의 개수를 말합니다. 해당 장비 CPU의 코어 개수의 반이 적절한 시작 값입니다.
 
--   Cache: Sets the cache that stores aggregate instances that have been reconstructed from the Event Store. The cache is used to store aggregate instances that are not in active use by the disruptor.
+- 이벤트 게시 스레드 개수(PublisherThreadCount): 이벤트를 게시하는데 사용되는 스레드의 개수를 설정 할 수 있습니다. 해당 장비 CPU의 코어 개수의 반이 적절한 시작 값이며, IO 비용이 많이 든다면 해당 값을 증가 시킬 수 있습니다.
 
--   InvokerThreadCount: The number of threads to assign to the invocation of command handlers. A good starting point is half the number of cores in the machine.
+- 직렬화 스레드 개수(SerializerThreadCount): 이벤트를 사전-직렬화하는데 사용되는 스레드의 개수를 의미하며, 기본값은 1입니다. 만약 serializer가 설정이 되어 있지 않다면 해당 값은 무시됩니다.
 
--   PublisherThreadCount: The number of threads to use to publish events. A good starting point is half the number of cores, and could be increased if a lot of time is spent on IO.
+- 직렬화 객체(Serializer): 이벤트를 직렬화하는 객체입니다. Serializer를 설정하면, `DisruptorCommandBus`는 `SerializationAware` 메시지로 생성된 모든 이벤트를 포함시켜 버립니다. 페이로드 및 메타 데이터는 직렬화된 형식으로 게시되기 전 이벤트 저장소에 저장됩니다.
 
--   SerializerThreadCount: The number of threads to use to pre-serialize events. This defaults to 1, but is ignored if no serializer is configured.
-
--   Serializer: The serializer to perform pre-serialization with. When a serializer is configured, the `DisruptorCommandBus` will wrap all generated events in a `SerializationAware` message. The serialized form of the payload and meta data is attached before they are published to the Event Store.
-
-Command Interceptors
+커멘드 인터셉터
 ====================
 
-One of the advantages of using a command bus is the ability to undertake action based on all incoming commands. Examples are logging or authentication, which you might want to do regardless of the type of command. This is done using Interceptors.
+커맨드 버스를 사용하면 명령의 유형에 상관없이 모든 수신 명령들에 대해 로깅 및 인증과 같은 작업을 처리할 수 있습니다. 인터셉터(Interceptor) 이런 작업을 처리할 수 있습니다.
 
-There are different types of interceptors: Dispatch Interceptors and Handler Interceptors. Dispatch Interceptors are invoked before a command is dispatched to a Command Handler. At that point, it may not even be sure that any handler exists for that command. Handler Interceptors are invoked just before the Command Handler is invoked.
+Dispatch Interceptor와 Handler Interceptor들과 같이 다른 유형의 인터셉터가 있습니다. Dispatch Interceptor는 명령 처리자로 전달되기 전의 명령들을 처리할 수 있습니다. 이때, 명령 처리자가 호출되기 전에는, 해당 명령에 대해 처리자가 있는지는 확신할 수 없습니다.
 
-Message Dispatch Interceptors
+메시지 게시 인터셉터
 -----------------------------
 
-Message Dispatch Interceptors are invoked when a command is dispatched on a Command Bus. They have the ability to alter the Command Message, by adding Meta Data, for example, or block the command by throwing an Exception. These interceptors are always invoked on the thread that dispatches the Command.
+메시지 게시 인터셉터(Message Dispatch Interceptor)들은 커맨드 버스로 명령이 전달될 때 호출이 됩니다. 메시지 게시 인터셉터를 통해 메타 데이터의 추가와 같은 명령 메시지 변경을 할 수 있고 예외를 발생시켜 명령이 전달되는 것을 막을 수 있습니다. 메시지 게시 인터셉터들은 명령을 전달하는 스레드와 같은 스레드에서 항상 호출됩니다.  
 
-### Structural validation
+### 구조적 검증
 
-There is no point in processing a command if it does not contain all required information in the correct format. In fact, a command that lacks information should be blocked as early as possible, preferably even before any transaction is started. Therefore, an interceptor should check all incoming commands for the availability of such information. This is called structural validation.
+필요한 모든 정보가 올바른 형식으로 되어 있지 않다면 명령은 처리되지 않습니다. 사실, 필요한 정보가 빠진 명령은 될 수 있는 대로 트랜잭션이 시작되기 전에 처리되지 않도록 최대한 빨리 막는 것이 좋습니다. 따라서, 인터셉터를 통해 명령이 필요한 모든 정보를 포함하고 있는지 확인해야 하며, 이를 구조적 검증 (Structural Validation)이라고 합니다.
 
-Axon Framework has support for JSR 303 Bean Validation based validation. This allows you to annotate the fields on commands with annotations like `@NotEmpty` and `@Pattern`. You need to include a JSR 303 implementation (such as Hibernate-Validator) on your classpath. Then, configure a `BeanValidationInterceptor` on your Command Bus, and it will automatically find and configure your validator implementation. While it uses sensible defaults, you can fine-tune it to your specific needs.
+Axon Framework는 JSR 303 Bean Validation 기반 검증을 지원합니다. `@NotEmpty` 그리고 `@Pattern`과 같은 에노테이션을 사용하여 명령의 필드를 검증할 수 있습니다. Hibernate-Validator와 같은 JSR 303 구현체를 클래스 패스에 추가해야 합니다. 그런 후에, `BeanValidationInterceptor`를 커맨드 버스에 설정하면 자동으로 검증 대상을 찾고 설정하게 됩니다. 합리적인 기본값을 사용하지만, 필요에 따라 조정할 수 있습니다.
 
-> **Tip**
+> **팁**
 >
-> You want to spend as few resources on an invalid command as possible. Therefore, this interceptor is generally placed in the very front of the interceptor chain. In some cases, a Logging or Auditing interceptor might need to be placed in front, with the validating interceptor immediately following it.
+> 부적합한 명령을 처리하는데 최소한의 자원을 사용하길 원할 것입니다. 그러므로, `BeanValidationInterceptor`를 인터셉터 체인의 맨 앞에 위치시켜야 합니다. 몇몇 경우에, 로깅 혹은 감사(auditing) 인터셉터를 맨 앞에 위치시켜야 한다면, `BeanValidationInterceptor`를 바로 그다음에 위치시켜야 합니다.
 
-The BeanValidationInterceptor also implements `MessageHandlerInterceptor`, allowing you to configure it as a Handler Interceptor as well.
+`BeanValidationInterceptor`는 `MessageHandlerInterceptor`의 구현체이기도 합니다. 따라서 핸들러 인터셉터로도 설정할 수 있습니다.
 
-Message Handler Interceptors
+메시지 처리 인터셉터
 ----------------------------
 
-Message Handler Interceptors can take action both before and after command processing. Interceptors can even block command processing altogether, for example for security reasons.
+메시지 처리 인터셉터는 명령 처리 이전과 이후에 특정 작업을 수행할 수 있도록 합니다. 메시지 처리 인터셉터는 예를 들어, 보안 문제 등과 같은 이유로 명령이 처리되는 것을 막을 수 있습니다.
 
-Interceptors must implement the `MessageHandlerInterceptor` interface. This interface declares one method, `handle`, that takes three parameters: the command message, the current `UnitOfWork` and an `InterceptorChain`. The `InterceptorChain` is used to continue the dispatching process.
+메시지 처리 인터셉터는 `MessageHandlerInterceptor`의 구현체이며, `handle` 메서드를 구현하고 있습니다. `handle`메서드는 명령 메시지, 현재의 작업단위(UnitOfWork) 그리고 `InterceptorChain`을 매개변수로 받습니다. `InterceptorChain` 매개변수는 명령 전달을 계속할지 말지를 결정하는 데 사용이 됩니다.
 
-Unlike Dispatch Interceptors, Handler Interceptors are invoked in the context of the Command Handler. That means they can attach correlation data based on the Message being handled to the Unit of Work, for example. This correlation data will then be attached to messages being created in the context of that Unit of Work.
+메시지 게시 인터셉터와는 달리, 메시지 처리 인터셉터는 명령 처리 컨텍스트 내에서 호출이 됩니다. 즉, 예를 들어 작업 단위에서 처리되는 메시지와 상관있는 데이터를 첨부할 수 있습니다. 이 상관 데이터는 동일 작업 단위의 컨텍스트에서 생성되는 메시지들에 추가됩니다.
 
-Handler Interceptors are also typically used to manage transactions around the handling of a command. To do so, register a `TransactionManagingInterceptor`, which in turn is configured with a `TransactionManager` to start and commit (or roll back) the actual transaction.
+메시지 처리 인터셉터는 또한, 명령 처리를 위한 트랜잭션을 관리하기 위해 사용이 되며, 이를 위해 `TransactionManagingInterceptor`를 등록해야 합니다. `TransactionManagingInterceptor`는 `TransactionManager`와 함께 구성되어 실제 트랜잭션을 시작하고 커밋(혹은 롤백)을 처리하게 됩니다.
 
-Distributing the Command Bus
+커맨드 버스 분산하기
 ============================
 
-The CommandBus implementations described in earlier only allow Command Messages to be dispatched within a single JVM. Sometimes, you want multiple instances of Command Buses in different JVMs to act as one. Commands dispatched on one JVM's Command Bus should be seamlessly transported to a Command Handler in another JVM while sending back any results.
+이전에 설명한 `CommandBus` 구현체들은 단일 JVM 내에서 명령 메시지를 전달할 수 있는 구현체들입니다. 때때로, 다른 JVM 상에서 작동하는 다수의 커맨드 버스들을 하나의 커맨드 버스처럼 작동하도록 해야 할 경우가 있습니다. 한 JVM 상의 커맨드 버스로 전달된 명령은 다른 JVM 상의 명령 처리자로 전달되어야 하며 결과는 반환되어야 합니다.
 
-That's where the `DistributedCommandBus` comes in. Unlike the other `CommandBus` implementations, the `DistributedCommandBus` does not invoke any handlers at all. All it does is form a "bridge" between Command Bus implementations on different JVM's. Each instance of the `DistributedCommandBus` on each JVM is called a "Segment".
+위와 같은 경우를 처리하기 위해 `DistributedCommandBus`를 사용합니다. 다른 `CommandBus` 구현체들과는 달리, `DistributedCommandBus`는 어떤 명령 처리자도 호출하지 않고, 다른 JVM 상의 커맨드 버스들을 어려 이어주는 다리(bridge) 역할만 합니다. 각각의 JVM 상에서 동작하는 `DistributedCommandBus`의 개별 인스턴스를 "세그먼트(Segment)"라고 합니다.
 
-![Structure of the Distributed Command Bus](distributed-command-bus.png)
+![분산 커맨드 버스의 구조](/assets/axon/distributed_command_bus.png)
 
-> **Note**
+> **참고**
 >
-> While the distributed command bus itself is part of the Axon Framework Core module, it requires components that you can find in one of the *axon-distributed-commandbus-...* modules. If you use Maven, make sure you have the appropriate dependencies set. The groupId and version are identical to those of the Core module.
+> 분산 처리가 가능한 커맨드 버스는 Axon Framework의 핵심 모듈의 일부분이긴 하지만, `axon-distributed-commandbus-...` 모듈 중 하나의 모듈의 컴포넌트들이 필요합니다. 메이븐을 사용할 경우, 필요한 의존성 들을 설정해야 합니다. 핵심 모듈과 같은 그룹 아이디(groupId)와 버전을 사용해야 합니다.
 
-The `DistributedCommandBus` relies on two components: a `CommandBusConnector`, which implements the communication protocol between the JVM's, and the `CommandRouter`, which chooses a destination for each incoming Command. This Router defines which segment of the Distributed Command Bus should be given a Command, based on a Routing Key calculated by a Routing Strategy. Two commands with the same Routing Key will always be routed to the same segment, as long as there is no change in the number and configuration of the segments. Generally, the identifier of the targeted aggregate is used as a routing key.
+`DistributedCommandBus`는 두 개의 컴포넌트가 필요합니다. 하나는 JVM 간 통신 프로토콜을 구현한 `CommandBusConnector`이고, 다른 하나는 수신된 명령을 분배하는 `CommandRouter`입니다. 커맨드 라우터(CommandRouter)는 라우팅 전략(Routing Strategy)에 의해 계산된 라우팅 키(Routing Key)에 기반을 두어, 분산 처리 커맨드 버스의 어느 세그먼트로 처리할 명령을 보낼지를 결정합니다. 세그먼트의 개수와 설정이 변경되지 않는 한, 같은 라우팅 키를 가지는 두 개의 명령들을 항상 같은 세그먼트로 가게 됩니다. 일반적으로, 대상 aggregate의 식별 값이 라우팅 키로 사용이 됩니다.
 
-Two implementations of the `RoutingStrategy` are provided: the `MetaDataRoutingStrategy`, which uses a Meta Data property in the Command Message to find the routing key, and the `AnnotationRoutingStrategy`, which uses the `@TargetAggregateIdentifier` annotation on the Command Messages payload to extract the Routing Key. Obviously, you can also provide your own implementation.
+`RoutingStrategy`의 두 구현체로 라우팅 키를 찾기 위해 커맨드 메시지의 메타 데이터 속성을 사용하는 `MetaDataRoutingStrategy`와 라우팅 키를 뽑아내기 위해 명령 메시지의 페이로드에 사용된 `@TargetAggregateIdentifier`를 기반으로 작동하는 `AnnotationRoutingStrategy`가 있습니다.
 
-By default, the RoutingStrategy implementations will throw an exception when no key can be resolved from a Command Message. This behavior can be altered by providing a UnresolvedRoutingKeyPolicy in the constructor of the MetaDataRoutingStrategy or AnnotationRoutingStrategy. There are three possible policies:
+ 기본적으로, `RoutingStrategy`의 구현체들은 명령 메시지로부터 라우팅 키를 찾지 못하면 예외를 발생시킵니다. 하지만 `MetaDataRoutingStrategy` 혹은 `AnnotationRoutingStrategy`의 생성자에 `UnresolvedRoutingKeyPolicy`를 전달하여 예외를 던지는 기본 행위를 변경할 수 있습니다. **ERROR**, **RANDOM_KEY**, **STATIC_KEY**와 같이 세 개의 가능한 정책을 제공합니다.
 
--   ERROR: This is the default, and will cause an exception to be thrown when a Routing Key is not available
+ - ERROR: 기본값이며, 사용 가능한 라우팅 키가 없는 경우 예외를 발생시킵니다.    
 
--   RANDOM\_KEY: Will return a random value when a Routing Key cannot be resolved from the Command Message. This effectively means that those commands will be routed to a random segment of the Command Bus.
+ - RANDOM\_KEY: 명령 메시지에서 라우팅 키를 찾지 못한 경우, 무작위로 생성된 값을 사용합니다. 따라서 해당 명령들은 무작위로 커맨드 버스의 세그먼트로 분배됩니다.    
 
--   STATIC\_KEY: Will return a static key (being "unresolved") for unresolved Routing Keys. This effectively means that all those commands will be routed to the same segment, as long as the configuration of segments does not change.
+ - STATIC\_KEY: "unresolved"의 값을 가지는 정적 키를 사용하게 되며, 세그먼트의 설정이 변경되지 않는 한 같은 세그먼트로 해당 명령들은 전달됩니다.
 
 JGroupsConnector
 ----------------
 
-The `JGroupsConnector` uses (as the name already gives away) JGroups as the underlying discovery and dispatching mechanism. Describing the feature set of JGroups is a bit too much for this reference guide, so please refer to the [JGroups User Guide](http://www.jgroups.org/ug.html) for more details.
+`JGroupsConnector`는 이미 이름에서 알 수 있듯이, 기본 검색 및 전송 메커니즘으로 JGroups를 사용합니다. JGroups의 기능들을 살펴보는 것은 본 참조 문서의 범위를 벗어나기 때문에, 상세 내용을 알고 싶다면 [JGroups User Guide](http://www.jgroups.org/ug.html)를 참조해주세요.
 
-Since JGroups handles both discovery of nodes and the communication between them, the `JGroupsConnector` acts as both a `CommandBusConnector` and a `CommandRouter`.
+JGroups는 노드(Node)의 검색과 노드 간 통신을 다루기 때문에, `JGroupsConnector`는 `CommandBusConnector`와 `CommandRouter`와 같은 역할을 합니다.
 
-> **Note**
+> **참고**
 >
-> You can find the JGroups specific components for the `DistributedCommandBus` in the `axon-distributed-commandbus-jgroups` module.
+> `axon-distributed-commandbus-jgroups` 모듈에서 `DistributedCommandBus`를 위한 JGroups 컴포넌트를 찾을 수 있습니다.
 
-The JGroupsConnector has four mandatory configuration elements:
+`JGroupsConnector`는 아래와 같이 반드시 필요한 네 가지의 설정을 해야 합니다.
 
--   The first is a JChannel, which defines the JGroups protocol stack. Generally, a JChannel is constructed with a reference to a JGroups configuration file. JGroups comes with a number of default configurations which can be used as a basis for your own configuration. Do keep in mind that IP Multicast generally doesn't work in Cloud Services, like Amazon. TCP Gossip is generally a good start in such type of environment.
+ * 첫 번째는 jChannel이며, jChannel은 JGroups의 프로토콜 스택을 정의합니다. 일반적으로, jChannel은 JGroups의 설정 파일에 대한 참조로 생성됩니다. JGroups는 다수의 기본 설정값들을 제공합니다. 일반적으로 아마존과 같은 클라우드 서비스상에서 IP Multicast는 작동하지 않습니다. 클라우드 환경에서 TCP Gossip을 사용하는 것이 좋은 시작점이 될 것입니다.
 
--   The Cluster Name defines the name of the Cluster that each segment should register to. Segments with the same Cluster Name will eventually detect each other and dispatch Commands among each other.
+* 클러스터 이름은 각 세그먼트가 등록해야 하는 클러스터의 이름을 정의하며, 같은 클러스터 이름을 가진 세그먼트는 결국 서로를 감지하고 서로 간에 명령을 전달합니다.
 
--   A "local segment" is the Command Bus implementation that dispatches Commands destined for the local JVM. These commands may have been dispatched by instances on other JVMs or from the local one.
+* "로컬 세그먼트"는 로컬 JVM을 대상으로 명령을 전달하는 커맨드 버스의 구현체입니다. 이런 명령들은 다른 JVM의 인스턴스나 로컬 JVM으로부터 전달될 수 있습니다.
 
--   Finally, the Serializer is used to serialize command messages before they are sent over the wire.
+* 마지막으로 명령 메시지가 전송되기 전에 명령 메시지를 직렬화하는 시리얼라이져 입니다.
 
-> **Note**
+> **참고**
 >
-> When using a Cache, it should be cleared out when the `ConsistentHash` changes to avoid potential data corruption (e.g. when commands don't specify a `@TargetAggregateVersion` and a new member quickly joins and leaves the JGroup, modifying the aggregate while it's still cached elsewhere.)
+> 캐시를 사용할 때, 잠재적인 데이터 부패 현상을 피하고자 `ConsistentHash`값이 변경될 때 캐시를 비우는 것이 좋습니다. (예, 명령이 `@TargetAggregateVersion`을 가지고 있지 않고, aggregate가 다른 곳에 캐시 되어 있는데 수정될 때, 새로운 멤버가 JGroups에 빠르게 참여했다가 떠나는 경우.)
 
-Ultimately, the JGroupsConnector needs to actually connect, in order to dispatch Messages to other segments. To do so, call the `connect()` method.
+JGroupsConnector는 다른 세그먼트로 메시지를 전달하기 위해 연결되어야 합니다. 이때 `connect()` 메서드를 호출하여 연결합니다.
 
 ``` java
 JChannel channel = new JChannel("path/to/channel/config.xml");
@@ -281,24 +276,24 @@ Serializer serializer = new XStreamSerializer();
 JGroupsConnector connector = new JGroupsConnector(channel, "myCommandBus", localSegment, serializer);
 DistributedCommandBus commandBus = new DistributedCommandBus(connector, connector);
 
-// on one node:
+// 특정 노드 상에서
 commandBus.subscribe(CommandType.class.getName(), handler);
 connector.connect();
 
-// on another node, with more CPU:
+// 보다 많은 CPU를 가진 또 다른 노드에서
 commandBus.subscribe(CommandType.class.getName(), handler);
 commandBus.subscribe(AnotherCommandType.class.getName(), handler2);
-commandBus.updateLoadFactor(150); // defaults to 100
+commandBus.updateLoadFactor(150); // 기본값: 100
 connector.connect();
 
-// from now on, just deal with commandBus as if it is local...
+// 여기서부터는, 커맨드 버스가 로컬에 있는 것처럼 다루면 돱니다.
 ```
 
-> **Note**
+> **참고**
 >
-> Note that it is not required that all segments have Command Handlers for the same type of Commands. You may use different segments for different Command Types altogether. The Distributed Command Bus will always choose a node to dispatch a Command to that has support for that specific type of Command.
+> 모든 세그먼트가 같은 타입의 명령들에 대한 명령 처리자를 포함하고 있을 필요는 없습니다. 다른 명령 타입에 대해 다른 세그먼트를 함께 사용할 수 있습니다. 분산된 커맨드 버스는 특정 타입의 명령을 처리할 수 있는 세그먼트로 명령을 전달할 수 있는 노드를 항상 선택합니다.
 
-If you use Spring, you may want to consider using the `JGroupsConnectorFactoryBean`. It automatically connects the Connector when the ApplicationContext is started, and does a proper disconnect when the `ApplicationContext` is shut down. Furthermore, it uses sensible defaults for a testing environment (but should not be considered production ready) and autowiring for the configuration.
+스프링을 사용한다면, `JGroupsConnectorFactoryBean`을 사용하는 것을 고려해 보세요. `JGroupsConnectorFactoryBean`은 애플리케이션 컨텍스트가 시작할 때 자동으로 커넥터에 연결하고, 애플리케이션 컨텍스트가 종료될 때 자동으로 연결을 끊습니다. 또한, 테스트 환경에 대한 합당한 기본값을 사용하고(운영 환경에 배포 가능한 것은 아닙니다.) 구성을 위해 자동 의존성 주입을 합니다.
 
 Spring Cloud Connector
 ----------------------
