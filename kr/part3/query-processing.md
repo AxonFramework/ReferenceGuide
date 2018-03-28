@@ -1,52 +1,51 @@
-Query Dispatching
+질의요청 전달하기
 =================
-Since version 3.1 Axon Framework also offers components for the Query handling. Although creating such a layer is fairly straight-forward, using Axon Framework for this part of the application has a number of benefits, such as the reuse of features such as interceptors and message monitoring. 
+Axon Framework 3.1 이후 버전은 질의 처리를 위한 컴포넌트를 제공합니다. 질의 처리를 위한 레이어는 어렵지 않게 생성할 수 있지만, Axon Framework을 사용하면 인터셉터와 메시지 모니터링과 같은 재사용 가능한 기능들을 사용할 수 있는 이점이 있습니다.
 
-The next sections provide an overview of the tasks related to setting up a Query dispatching infrastructure with the Axon Framework.
+다음 장에서는, Axon Framework을 사용하여 질의요청 처리 구조를 설정하기 위한 작업들을 살펴볼 것 입니다.
 
-Query Gateway
+질의 게이트웨이
 =============
-The Query Gateway is a convenient interface towards the Query dispatching mechanism. While you are not required to use a Gateway to dispatch Queries, it is generally the easiest option to do so. Axon provides a `QueryGateway` interface and the `DefaultQueryGateway` implementation. The query gateway provides a number of methods that allow you to send a query and wait for a single or multiple results either synchronously, with a timeout or asynchronously. The query gateway needs to be configured with access to the Query Bus and a (possibly empty) list of `QueryDispatchInterceptor`s.
+질의 게이트웨이는 질의요청 전달을 위한 메커니즘을 처리하기 위한 인터페이스입니다. 게이트웨이를 사용하여 질의 요청을 전달해야 하는 것은 아니지만, 일반적으로 그렇게 하는 것이 가장 쉬운 방법입니다. Axon Framework는 `QueryGateway` 인터페이스와 `DefaultQueryGateway` 구현체를 제공합니다. 질의 게이트웨이는 질의 요청을 보내고 단일 혹은 다수의 결과를 동기적으로 또는 타임아웃 혹은 비동기적으로 기다릴 수 있는 메서드들을 제공합니다. 쿼리 버스와 `QueryDispatchInterceptor`들의 목록(빈 목록 가능)에 접근할 수 있도록 질의 게이트웨이를 설정해야 합니다.
 
-Query Bus
+쿼리(질의) 버스
 =========
-The Query Bus is the mechanism that dispatches queries to Query Handlers. Queries are registered using the combination of the query request name and query response type. It is possible to register multiple handlers for the same request-response combination, which can be used to implement for instance the scatter-gather pattern. When dispatching queries, the client must indicate whether it wants a response from a single handler or from all handlers.
+쿼리 버스는 질의 처리자에게 질의 요청을 전달하기 위한 메커니즘입니다. 질의는 질의 요청 이름과 질의의 응답 타입의 조합을 사용하여 등록합니다. 예를 들어 [scatter-gather 패턴](http://www.enterpriseintegrationpatterns.com/patterns/messaging/BroadcastAggregate.html)을 구현하는데 사용할 수 있는 같은 요청-응답 조합에 대해 다수의 처리자를 등록할 수 있습니다. 질의를 전달할 때, 질의 요청을 한 클라이언트는 단일 처리자로부터의 응답 혹은 모든 처리자로부터의 응답 중 어느 것을 원하는지 반드시 지정해야 합니다.
 
-If the client requests a response from a single handler, and no handler is found, a `NoHandlerForQueryException` is thrown. In case multiple handlers are registered, it is up to the implementation of the Query Bus to decide which handler is actually invoked.
+클라이언트가 단일 처리자로부터의 응답을 요청하고 클라이언트가 요청한 질의를 처리할 처리자가 없는 경우, `NoHandlerForQueryException`이 발생하게 됩니다. 다수의 처리자가 등록된 경우, 실제로 호출되는 처리자를 결정하는 것은 쿼리 버스를 어떻게 구현하느냐에 따라 결정됩니다.
 
-If the client requests a response from all handlers, a stream of results is returned. This stream contains a result from each handler that successfully handled the query, in unspecified order. In case there are no handlers for the query, or all handlers threw an exception while handling the request, the stream is empty.
+만약 클라이언트가 모든 처리자로부터 응답을 원할 경우, 결과의 스트림이 반환됩니다. 해당 스트림은 개별 처리자가 반환한 결과를 포함하고 있습니다. 다만, 정상적으로 질의가 처리된 경우의 결과를 포함하며, 특정 순서대로 포함하고 있지 않습니다. 질의에 대해 처리자가 없는 경우나 모든 처리자가 예외를 발생시키는 경우에는 해당 스트림은 비어 있게 됩니다.
 
-SimpleQueryBus
+심플쿼리버스
 --------------
-The `SimpleQueryBus` is the only Query Bus implementation in Axon 3.1. It does straightforward processing of queries in the thread that dispatches them. The `SimpleQueryBus` allows interceptors to be configured, see [Query Interceptors](#query-interceptors) for more information.
+`SimpleQueryBus`는 Axon 3.1 버전에서 재공하는 단 하나의 질의 버스 구현체입니다. 심플 쿼리 버스는 질의 요청을 처리하는 스레드에서 해당 질의 요청을 직접 처리합니다. `SimpleQueryBus`에 인터셉터를 설정할 수 있으며, 상세한 내용은 [질의 인터셉터](Query Interceptors)를 참고하세요.
 
-Query Interceptors
+쿼리(질의) 인터셉터
 ==================
-One of the advantages of using a query bus is the ability to undertake action based on all incoming queries. Examples are logging or authentication, which you might want to do regardless of the type of query. This is done using Interceptors.
+쿼리 버스를 사용하여 얻는 이점 중 하나는 들어오는 질의 처리 요청에 대한 작업을 수행할 수 있다는 것입니다. 예를 들어, 특정 질의 유형에 상관없이 수행할 수 있는 로깅 혹은 인증을 처리할 수 있습니다. 이런 작업은 인터셉터를 통해 처리할 수 있습니다.
 
-There are different types of interceptors: Dispatch Interceptors and Handler Interceptors. Dispatch Interceptors are invoked before a query is dispatched to a Query Handler. At that point, it may not even be sure that any handler exists for that query. Handler Interceptors are invoked just before a Query Handler is invoked.
+디스팻치(Dispatch) 인터셉터와 처리자(Handler) 인터셉터와 같이 다른 유형의 인터셉터가 있습니다. 디스팻치(Dispatch) 인터셉터는 질의 처리 요청이 질의 처리자(handler)로 전달되기 전에 호출이 되며, 이때 해당 질의 요청을 처리할 수 있는 처리자가 있는지를 확신할 수 없습니다. 처리자(Handler) 인터셉터는 질의 처리자를 호출하기 바로 전에 호출이 됩니다.
 
-Dispatch Interceptors
+디스팻치(Dispatch) 인터셉터
 ---------------------
-Message Dispatch Interceptors are invoked when a query is dispatched on a Query Bus. They have the ability to alter the Query Message, by adding Meta Data, for example, or block the query by throwing an Exception. These interceptors are always invoked on the thread that dispatches the Query.
-Message Dispatch Interceptors are invoked when a query is dispatched on a Query Bus. They have the ability to alter the Query Message, by adding Meta Data, for example, or block the query by throwing an Exception. These interceptors are always invoked on the thread that dispatches the Query.
+메시지 디스팻치(Dispatch) 인터셉터들은 쿼리 버스를 통해 질의 요청이 전달 돨때 호출이 됩니다. 메시지 디스팻치(Dispatch) 인터셉터를 통해 질의 메시지를 변경할 수 있으며, 메타 데이터(Meta Data)를 추가할 수 있습니다. 혹은 예외를 던져 질의 요청이 처리되지 않도록 할 수 있습니다. 이런 디스팻치 인터셉터들은 해당 질의 요청을 전달하는 스레드 상에서 호출이 됩니다.
 
-### Structural validation
+### 구조적 검증
 
-There is no point in processing a query if it does not contain all required information in the correct format. In fact, a query that lacks information should be blocked as early as possible. Therefore, an interceptor should check all incoming queries for the availability of such information. This is called structural validation.
+처리될 질의 요청이 올바른 형식으로 처리에 필요한 모든 정보를 가졌는지를 확인할 수 있는 지점은 없습니다. 사실, 필요한 정보를 가지고 있지 않은 질의 요청은 처리되지 않도록 최대한 빨리 막아야 합니다. 그러므로, 인터셉터를 통해 질의 요청들이 필요한 정보들을 포함하고 있는지 확인해야 합니다. 이를 구조적 검증이라고 합니다.
 
-Axon Framework has support for JSR 303 Bean Validation based validation. This allows you to annotate the fields on queries with annotations like `@NotEmpty` and `@Pattern`. You need to include a JSR 303 implementation (such as Hibernate-Validator) on your classpath. Then, configure a `BeanValidationInterceptor` on your Query Bus, and it will automatically find and configure your validator implementation. While it uses sensible defaults, you can fine-tune it to your specific needs.
+Axon Framework은 JSR 303 Bean Validation을 지원하며, 이를 통해 질의들의 필드에 `@NotEmpty` 그리고 `@Pattern`과 같은 에노테이션을 사용할 수 있습니다. `@NotEmpty`, `@Pattern`과 같은 에노테이션을 사용하려면, JSR 303 구현체(Hibernate-Validator와 같은)를 클래스 패스에 추가해야 합니다. 그런 후에, `BeanValidationInterceptor`를 쿼리 버스에 설정하면, 자동으로 검증 구현체를 발견하고 설정합니다. 이렇게 자동으로 설정되긴 하지만, 구현상의 특정 목적에 따라 조정할 수 있습니다.
 
-> **Tip**
+> **팁**
 >
-> You want to spend as few resources on an invalid queries as possible. Therefore, this interceptor is generally placed in the very front of the interceptor chain. In some cases, a Logging or Auditing interceptor might need to be placed in front, with the validating interceptor immediately following it.
+> 올바르지 않은 질의 처리에 최소한의 자원들은 사용하려면, 이런 인터셉터를 일반적으로 인터셉터 체인 상에서 가장 앞단에 위치시켜야 합니다. 몇몇 경우에, 로깅 혹은 감사(Auditing) 인터셉터를 앞단에 위치시켜야 할 수 있습니다. 이런 경우, 검증 인터셉터를 바로 뒤에 위치시켜야 합니다.
 
-The BeanValidationInterceptor also implements `MessageHandlerInterceptor`, allowing you to configure it as a Handler Interceptor as well.
+`BeanValidationInterceptor`는 또한 `MessageHandlerInterceptor`의 구현체이기 때문에, `BeanValidationInterceptor`는 처리자 인터셉터로도 설정할 수 있습니다.
 
-Handler Interceptors
+처리자 인터셉터
 --------------------
-Message Handler Interceptors can take action both before and after query processing. Interceptors can even block query processing altogether, for example for security reasons.
+메시지 처리 인터셉터들을 통해 질의 요청의 처리 전, 후에 특정 작업을 처리힐 수 있습니다. 예를 들어, 보안 측면인 이유로 인터셉터를 통해 특정 질의의 처리를 막을 수 있습니다.
 
-Interceptors must implement the `MessageHandlerInterceptor` interface. This interface declares one method, `handle`, that takes three parameters: the query message, the current `UnitOfWork` and an `InterceptorChain`. The `InterceptorChain` is used to continue the dispatching process.
+처리지 인터셉터는 `MessageHandlerInterceptor` 인터페이스를 반드시 구현해야 합니다. `MessageHandlerInterceptor` 인터페이스는 `handle`이라는 단 하나의 메서드를 가지고 있으며, `handle` 메서드는 질의 메시지, 현재의 `UnitOfWork` 그리고 `InterceptorChain` 이렇게 세 개의 매개변수를 가집니다. `InterceptorChain`를 통해 질의 요청 전달을 이어 갈 수 있습니다.
 
-Unlike Dispatch Interceptors, Handler Interceptors are invoked in the context of the Query Handler. That means they can attach correlation data based on the Message being handled to the Unit of Work, for example. This correlation data will then be attached to messages being created in the context of that Unit of Work.
+디스팻치 인터셉터와는 달리, 처리자 인터셉터는 질의 처리자의 컨택스트 상에서 호출이 됩니다. 이것은 작업단위(Unit of Work)에서 처리할 메시지와 상관관계를 가지는 데이터를 추가할 수 있음을 의미합니다. 이런 상관관계의 데이터는 작업단위의 컨텍스트내에서 생성된 메시지들에 추가될 것입니다. 
