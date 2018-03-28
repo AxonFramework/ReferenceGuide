@@ -44,125 +44,129 @@
 
 설정 API를 통해 위와 다른 처리자 클래스를 프로세서에 할당하거나 특정 인스턴스를 특정 프로세서에 할당하는 등 의 전략을 설정할 수 있습니다.
 
-### Ordering Event Handlers within a single Event Processor
+### 단일 이벤트 프로세서내의 이벤트 처리자 순서 정하기
 
-To order Event Handlers within an Event Processor, the ordering in which Event Handlers are registered (as described in the [Registering Event Handlers](../part2/event-handling.md#registering-event-handlers) section) is guiding. Thus, the ordering in which Event Handlers will be called by an Event Processor for Event Handling is their insertion ordering in the configuration API.
+단일 이벤트 프로세서의 이벤트 처리자들의 순서를 정하려면, 이벤트 처리자가 등록되는 순서를 먼저 알아야 합니다. 그 이유는 이벤트 처리자의 호출 순서는 등록된 순서대로 호출이 되기 때문입니다 (이벤트 처리자의 등록은 [이벤트-처리자-등록하기](../part2/event-handling.html#이벤트-처리자-등록하기)를 참조하세요). 즉, 이벤트를 수신했을 때 이벤트 프로세서는 이벤트 처리자가 설정 API를 통해 등록된 순서대로 이벤트 처리자를 호출하게 됩니다.
 
-If Spring is selected as the mechanism to wire everything, the ordering of the Event Handlers can be specified by adding the `@Order` annotation. This annotation should be placed on class level of your Event Handler class, adding a `integer` value to specify the ordering.
+객체 간 의존성을 주입하기 위해 스프링을 사용한다면, 이벤트 처리자의 등록 순서는 `@Order` 에노테이션에 명시하면 됩니다. `@Order` 에노테이션을 이벤트 처리자 클래스에 선언하고 순서에 해당하는 `정수 (integer)`값을 명시하면 됩니다.
 
-Do note that it is not possible to order Event Handlers which are not a part of the same Event Processor.
+다른 이벤트 프로세서에 있는 이벤트 처리자들 간의 순서를 정할 수는 없습니다.
 
-### Configuring processors
+### 이벤트 프로세서 설정하기
 
-Processors take care of the technical aspects of handling an event, regardless of the business logic triggered by each event. However, the way "regular" (singleton, stateless) event handlers are Configured is slightly different from Sagas, as different aspects are important for both types of handlers.
+이벤트 프로세서는 개별 이벤트에 의해 수행되는 비즈니스 로직에 상관없이 이벤트를 처리하기 위한 기술적인 부분만을 담당합니다. 하지만, "일반적인" (싱글턴, 스테이트리스(stateless)) 이벤트 처리자들의 구성 방식은 Saga들과는 약간 다릅니다. 두 가지 유형의 처리자는 다른 관점으로 처리되기 때문입니다.
 
-#### Event Handlers ####
+#### 이벤트 처리자 ####
 
-By default, Axon will use Subscribing Event Processors. It is possible to change how Handlers are assigned and how processors are configured using the `EventHandlingConfiguration` class of the Configuration API.
+Axon은 이벤트 구독(subscribing) 프로세서를 기본으로 사용합니다. 설정 API의 ```EventHandlingConfiguration```클래스를 통해 처리자를 지정하고 프로세서의 설정 방법을 변경할 수 있다.
 
-The `EventHandlingConfiguration` class defines a number of methods that can be used to define how processors need to be configured.
+`EventHandlingConfiguration` 클래스에는 다음과 같이 프로세서를 설정하기 위한 메서드를 정의하고 있습니다.
 
-- `registerEventProcessorFactory` allows you to define a default factory method that creates Event Processors for which no explicit factories have been defined.
+- `registerEventProcessorFactory` 메서드를 통해, 명시적인 팩토리 메서드가 없는 경우에 사용되는 이벤트 프로세서를 생성하는 기본 팩토리 메서드를 설정할 수 있습니다.
 
-- `registerEventProcessor(String name, EventProcessorBuilder builder)` defines the factory method to use to create a Processor with given `name`. Note that such Processor is only created if `name` is chosen as the processor for any of the available Event Handler beans.
+- `registerEventProcessor(String name, EventProcessorBuilder builder)` 메서드는 주어진 `name` 매개변수를 이름으로 가지는 프로세서를 생성하는 팩토리 메서드를 정의합니다. 사용 가능한 이벤트 처리자 빈들에 대한 프로세서 명으로 주어진 `name` 매개 변수명이 채택이 될 때만 프로세서는 생성이 됩니다.
 
-- `registerTrackingProcessor(String name)` defines that a processor with given name should be configured as a Tracking Event Processor, using default settings. It is configured with a TransactionManager and a TokenStore, both taken from the main configuration by default.
+- `registerTrackingProcessor(String name)` 메서드는 기본 설정값으로 주어진 이름을 가지는 이벤트 추적 프로세서를 정의합니다. TransactionManager와 TokenStore를 함께 설정하며, 두 객체 기본적으로 주 설정 객체를 통해 받아 올 수 있습니다.
 
-- `registerTrackingProcessor(String name, Function<Configuration, TrackingEventProcessorConfiguration> processorConfiguration, Function<Configuration, SequencingPolicy<? super EventMessage<?>>> sequencingPolicy)` defines that a processor with given name should be configured as a Tracking Processor, and use the given `TrackingEventProcessorConfiguration` to read the configuration settings for multi-threading. The `SequencingPolicy` defines which expectations the processor has on sequential processing of events. See [Parallel Processing](#parallel-processing) for more details.
+- `registerTrackingProcessor(String name, Function processorConfiguration, Function>> sequencingPolicy)` 메서드를 통해 주어진 이름을 가지는 이벤트 추적 프로세서를 정의하고, 다중 스레드 설정을 알기 위해 주어진 `TrackingEventProcessorConfiguration` 객체를 사용합니다. `SequencePolicy`는 순차적인 이벤트 처리 설정을 정의하기 위해 사용됩니다. 상세 내용은 [Parallel Processing](#병렬-프로세싱)을 참고하세요.
 
-- `usingTrackingProcessors()` sets the default to Tracking Processors instead of Subscribing ones.
+- `usingTrackingProcessor()` 메서드를 통해 이벤트 구독 프로세서 대신 기본으로 추적 이벤트 프로세서를 설정하도록 할 수 있습니다.
 
-#### Sagas ####
+#### 사가 ####
 
-Sagas are configured using the `SagaConfiguration` class. It provides static methods to initialize an instance either for Tracking Processing, or Subscribing.
+`SagaConfiguration` 클래스를 통해 Saga들을 설정할 수 있습니다. `SagaConfiguration` 클래스는 추적 프로세서 혹은 구독 프로세서 둘 중 하나의 인스턴스를 초기화하기 위한 정적 메세드들을 제공합니다.
 
-To configure a Saga to run in subscribing mode, simply do:
+구독 모드로 Saga를 설정하기 위해선 다음과 같이 하면 됩니다.
 
 ```java
 SagaConfiguration<MySaga> sagaConfig = SagaConfiguration.subscribingSagaManager(MySaga.class);
 ```
 
-If you don't want to use the default EventBus / Store as source for this Saga to get its messages from, you can define another source of messages as well:
+Saga에서 처리될 메세지를 제공하는 기본 이벤트 버스 및 스토어를 사용하지 않을 경우, 다른 메세지 제공 객체를 설정할 수 있습니다.
 
 ```java
-SagaConfiguration.subscribingSagaManager(MySaga.class, c -> /* define source here */);
+SagaConfiguration.subscribingSagaManager(MySaga.class, c -> /* 메세지 제공 객체를 설정합니다. */);
 ```
-Another variant of the `subscribingSagaManager()` method allows you to pass a (builder for an) `EventProcessingStrategy`. By default, Sagas are invoked in synchronously. This can be made asynchronous using this method. However, using Tracking Processors is the preferred way for asynchronous invocation.
 
-To configure a Saga to use a Tracking Processor, simply do:
+`subscribingSagaManager()` 메서드의 또 다른 형태를 통해, `EventProcessingStrategy` 객체를 매개변수로 넘길 수 있습니다. 기본적으로, Saga는 동기적으로 호출되지만, 해당 메서드를 통해 비동기적으로 Saga를 호출할 수 있습니다. 그런데, 추적 프로세서는 비동기 호출 방식을 사용합니다.
+
+추적 프로세서를 사용하도록 Saga를 설정하기 위해선, 아래와 같이 하면 됩니다.
+
 ```java
 SagaConfiguration.trackingSagaManager(MySaga.class);
 ```
 
-This will set the default properties, meaning a single Thread is used to process events. To change this:
+위와 같이 작성하면, 기본 속성을 사용하게 됩니다. 즉, 단일 쓰레드로 이벤트를 처리하게 됩니다. 이를 변경하려면 아래와 같이 작성합니다.
+
 ```java
 SagaConfiguration.trackingSagaManager(MySaga.class)
-                 // configure 4 threads
+                 // 4개의 쓰레드를 설정합니다.
                  .configureTrackingProcessor(c -> TrackingProcessingConfiguration.forParallelProcessing(4))
 ```
-The `TrackingProcessingConfiguration` has a few methods allowing you to specify how many segments will be created and which ThreadFactory should be used to create Processor threads. See [Parallel Processing](#parallel-processing) for more details.
 
-Check out the API documentation (JavaDoc) of the `SagaConfiguration` class for full details on how to configure event handling for a Saga.
+`TrackingProcessingConfiguration` 클래스의 메서드를 통해, 몇 개의 세그먼트를 생성할지와 어떤 스레드 팩토리(ThreadFactory)를 통해 프로세서 스레드를 생성할지를 설정할 수 있습니다. 상세 내용은 [Parallel Processing](#병렬-프로세싱)을 참고하세요.
+
+Saga를 위한 이벤트 처리 방법에 대한 상세 내용은 `SagaConfiguration` 클래스의 API 문서를 확인해 보세요.
 
 
-### Token Store ###
+### 토큰 스토어 ###
 
-Tracking Processors, unlike Subscribing ones, need a Token Store to store their progress in. Each message a Tracking Processor receives through its Event Stream is accompanied by a Token. This Token allows the processor to reopen the Stream at any later point, picking up where it left off with the last Event.
+구독 이벤트 프로세서와는 달리, 추적 프로세서는 진행 상태를 저장하기 위한 토큰 저장소(token store)가 필요합니다. 추적 프로세서가 이벤트 스트림을 통해 수신하는 각각의 메시지는 토큰을 함께 가지고 있습니다. 이 토큰을 통해, 프로세서는 마지막 이벤트를 수신한 시점 이후의 시점에서 이벤트 스트림을 다시 열 수 있습니다.
 
-The Configuration API takes the Token Store, as well as most other components Processors need from the Global Configuration instance. If no TokenStore is explicitly defined, an `InMemoryTokenStore` is used, which is *not recommended in production*.
+설정 API는 전역 설정 인스턴스에서 필요로 하는 대부분의 다른 구성 요소와 함께 토큰 저장소를 설정합니다. 토큰 저장소를 명시적으로 정의하지 않는다면, `InMemoryTokenStore`를 기본으로 사용합니다. 단, `InMemoryTokenStore`는 *운영 환경에서 사용하기에는 적절하지 않습니다*.
 
-To configure a different Token Store, use `Configurer.registerComponent(TokenStore.class, conf -> ... create token store ...)`
+다른 토큰 저장소를 설정하려면, `Configurer.registerComponent(TokenStore.class, conf -> /* 토큰 저장소를 생성 등록합니다. */)`
 
-Note that you can override the TokenStore to use with Tracking Processors in the respective `EventHandlingConfiguration` or `SagaConfiguration` that defines that Processor. Where possible, it is recommended to use a Token Store that stores tokens in the same database as where the Event Handlers update the view models. This way, changes to the view model can be stored atomically with the changed tokens, guaranteeing exactly once processing semantics.
+프로세서를 정의하는 `EventHandlingConfiguration` 혹은 `SagaConfiguration`의 추적 프로세서와 함께 사용할 토큰 저장소를 재정의하여 사용할 수 있습니다. 가능하다면, 이벤트 처리자가 뷰 모델을 갱신하는 데이터베이스와 같은 데이터베이스를 토큰 저장소로 사용하는 것을 권장합니다. 이렇게 하면, 토큰의 변경과 함께 뷰 모델의 변경 사항을 원자 적으로 저장할 수 있으며, 정확하게 한꺼번에 처리되도록 하는 것을 보장할 수 있습니다.
 
-### Parallel Processing ###
+### 병렬 프로세싱 ###
 
-As of Axon Framework 3.1, Tracking Processors can use multiple threads to process an Event Stream. They do so, by claiming a so-called segment, identifier by a number. Normally, a single thread will process a single Segment.
+Axon Framework 3.1버전에선, 추적 프로세서는 이벤트 스트림을 처리하기 위해 여러 개의 스레드를 사용할 수 있습니다. 동시에 여러 개의 스레드로 이벤트 스트림을 처리하기 위해서, 소위 세그먼트(segment)라는 번호로 식별되는 식별자를 요청합니다. 일반적으로 단일 스레드는 단일 세그먼트를 처리합니다.
 
-The number of Segments used can be defined. When a Processor starts for the first time, it can initialize a number of segments. This number defines the maximum number of threads that can process events simultaneously. Each node running of a TrackingProcessor will attempt to start its configured amount of Threads, to start processing these.
+사용될 다수의 세그먼트를 정의할 수 있습니다. 처음 프로세서가 시작되었을 때, 여러 개의 세그먼트를 초기화할 수 있습니다. 세그먼트의 개수가 동시에 이벤트들을 처리할 최대 스레드 개수를 정의하게 됩니다. 추적 프로세서로 실행되는 각각의 노드는 설정된 개수만큼의 스레드를 시작하고 이벤트들의 처리를 시작합니다.
 
-Event Handlers may have specific expectations on the ordering of events. If this is the case, the processor must ensure these events are sent to these Handlers in that specific order. Axon uses the `SequencingPolicy` for this. The `SequencingPolicy` is essentially a function, that returns a value for any given message. If the return value of the `SequencingPolicy` function is equal for two distinct event messages, it means that those messages must be processed sequentially. By default, Axon components will use the `SequentialPerAggregatePolicy`, which makes it so that Events published by the same Aggregate instance will be handled sequentially.
+이벤트 처리자들이 특정 순서대로 이벤트들을 처리하기를 원할 수 있습니다. 이런 경우, 해당 프로세서는 정해진 순서대로 이벤트들이 이벤트 처리자로 전송되도록 보장해야 합니다. Axon은 순차적인 이벤트 처리를 위해 `SequencingPolicy`를 사용합니다. `SequencingPolicy`는 주어진 메시지의 처리 순서 값을 반환하는 함수입니다. 두 메시지에 대한 값이 같다는 것은 해당 메시지들은 반드시 차례대로 처리되어야 하는 것을 의미합니다. 처리될 순서는 이벤트 버스가 이벤트를 게시한 순서입니다. 기본적으로, Axon 컴포넌트들은 `SequentialPerAggregatePolicy`를 사용합니다. 이 경우, 같은 aggregate 인스턴스에 의해 게시된 이벤트들은 차례대로 처리됩니다.
 
-A Saga instance is never invoked concurrently by multiple threads. Therefore, a Sequencing Policy for a Saga is irrelevant. Axon will ensure each Saga instance receives the Events it needs to process in the order they have been published on the Event Bus.
+Saga 인스턴스는 다중 스레드에 의해 절대 호출되지 않습니다. 따라서, 순차적 처리 정책은 Saga에는 해당하지 않습니다. Axon은 각각의 Saga 인스턴스들이 이벤트 버스에 의해 게시된 순서대로 처리할 이벤트들을 수신하도록 보장합니다.
 
-> ** Note **
+> **참고**
 >
-> Note that Subscribing Processors don't manage their own threads. Therefore, it is not possible to configure how they should receive their events. Effectively, they will always work on a sequential-per-aggregate basis, as that is generally the level of concurrency in the Command Handling component.
+> 구독 프로세서는 자체 스레드를 관리하지 않습니다. 즉, 구독 프로세서들은 이벤트 수신 방법을 설정할 수 없습니다. 일반적으로 명령 처리 컴포넌트에서의 동시성 레벨인 aggregate별 순차적 처리에 기반을 두고 이벤트를 처리합니다.
 
-#### Multi-node processing ####
+#### 다중 노드를 활용한 처리 ####
 
-For tracking processors, it doesn't matter whether the Threads handling the events are all running on the same node, or on different nodes hosting the same (logical) TrackingProcessor. When two instances of TrackingProcessor, having the same name, are active on different machines, they are considered two instances of the same logical processor. They will 'compete' for segments of the Event Stream. Each instance will 'claim' a segment, preventing events assigned to that segment from being processed on the other nodes.
+추적 프로세서는 동일 노드 혹은 논리적으로 같은 추적 프로세서를 가지는 다른 노드에서 이벤트 처리 스레드들이 모두 실행 중인지에 대해 신경 쓰지 않습니다. 같은 이름을 가지는 두 개의 추적 프로세서가 다른 머신(machine)에서 활성화되어 있을 때, 추적 프로세서들은 논리적으로 같은 프로세서의 인스턴스로 취급됩니다. 추적 프로세서들은 이벤트 스트림의 세그먼트에 대해 서로 경쟁을 하며, 각각의 인스턴스는 다른 노드에서 처리되는 것을 방지하기 위해 세그먼트를 요청하여 할당받습니다.
 
-The `TokenStore` instance will use the JVM's name (usually a combination of the host name and process ID) as the default `nodeId`. This can be overridden in `TokenStore` implementations that support multi-node processing.
+ `TokenStore` 인스턴스는 JVM의 이름(보통 호스트 이름과 프로세스 ID의 조합입니다.)을 `nodeId`로 사용합니다. 하지만 다중 노드 처리를 위해 `TokenStore`를 재정의하여 다른 이름을 사용하도록 할 수 있습니다.
 
-Distributing Events
+이벤트들을 분산하여 처리하기
 -------------------
 
-In some cases, it is necessary to publish events to an external system, such as a message broker.
+몇몇 경우엔, 메시지 브로커와 같은 외부 시스템으로 이벤트를 게시할 필요가 있습니다.
 
-### Spring AMQP
+### 스프링 AMQP
 
-Axon provides out-of-the-box support to transfer Events to and from an AMQP message broker, such as Rabbit MQ.
+Axon은 Rabbit MQ와 같은 AMQP 메시지 브러커와 이벤트를 주고 받는 기능을 제공합니다.
 
-#### Forwarding events to an AMQP Exchange
+#### AMQP 익스체인지로 이벤트 전달하기
 
-The `SpringAMQPPublisher` forwards events to an AMQP Exchange. It is initialized with a `SubscribableMessageSource`, which is generally the `EventBus` or `EventStore`. Theoretically, this could be any source of Events that the publisher can Subscribe to.
+`SpringAMQPPublisher`는 AMQP 익스체인지로 이벤트를 전달합니다. `SpringAMQPPublisher`를 초기화하기 위해선 일반적으로 `EventBus` 혹은 `EventStore`인 `SubscribableMessageSource`가 필요합니다. 이론적으로, 이벤트 게시자가 구독할 수 있는 모든 이벤트 소스를 설정할 수 있습니다.
 
-To configure the SpringAMQPPublisher, simply define an instance as a Spring Bean. There is a number of setter methods that allow you to specify the behavior you expect, such as Transaction support,  publisher acknowledgements (if supported by the broker), and the exchange name.
+`SpringAMQPPublisher`를 설정하기 위해선, Spring의 Bean으로 간단히 등록하면 됩니다. 트랜잭션 지원, 게시자 인지(브로커가 지원하는 경우에 한함) 그리고 익스체인지(exchange) 이름과 같은 것들을 설정할 수 있는 setter 메서드를 제공합니다.
 
-The default exchange name is 'Axon.EventBus'.
+기본 exchange 이름은 "Axon.EventBus"입니다.
 
-> **Note**
+> **참고**
 >
-> Note that exchanges are not automatically created. You must still declare the Queues, Exchanges and Bindings you wish to use. Check the Spring documentation for more information.
+> 익스체인지(exchange)는 자동으로 생성되지 않습니다. 따라서 사용하려는 큐, 익스체인지 그리고 바인딩들을 반드시 선언해야 합니다. 보다 자세한 내용은 [스프링 문서](https://docs.spring.io/spring-amqp/reference/htmlsingle/)를 참고해 주세요.
 
-#### Reading Events from an AMQP Queue
+#### AMQP 큐로부터 이벤트 읽어오기
 
-Spring has extensive support for reading messages from an AMQP Queue. However, this needs to be 'bridged' to Axon, so that these messages can be handled from Axon as if they are regular Event Messages.
+스프링의 지원을 받아 AMQP 큐로부터 이벤트 읽어올 수 있습니다. 그런데, AMQP 큐로부터 이벤트 읽어와서 해당 이벤트가 일반적인 이벤트 메시지만 Axon을 통해 처리하려면, Axon으로 연결을 해줘야 합니다.
 
-The `SpringAMQPMessageSource` allows Event Processors to read messages from a Queue, instead of the Event Store or Event Bus. It acts as an adapter between Spring AMQP and the `SubscribableMessageSource` needed by these processors.
+`SpringAMQPMessageSource`를 통해 이벤트 스토어 혹은 이벤트 버스 대신, 이벤트 프로세서가 메시지를 읽어오게 할 수 있습니다. `SpringAMQPMessageSource`는 스프링 AMQP와 프로세서가 필요로 하는`SubscribableMessageSource`사이의 어댑터 같은 역할을 해줍니다.
 
-The easiest way to configure the SpringAMQPMessageSource, is by defining a bean which overrides the default `onMessage` method and annotates it with `@RabbitListener`, as follows:
+`SpringAMQPMessageSource`를 설정하는 가장 쉬운 방법은 `onMessage`메서드를 제정의 하는 bean 객체를 정의하고 `@RabbitListener` 에노테이션을 붙여 주는 것입니다. 아래의 예제와 같이 말이죠.
 
 ```java
 @Bean
@@ -177,41 +181,41 @@ public SpringAMQPMessageSource myMessageSource(Serializer serializer) {
 }
 ```
 
-Spring's `@RabbitListener` annotation tells Spring that this method needs to be invoked for each message on the given Queue ('myQueue' in the example). This method simply invokes the `super.onMessage()` method, which performs the actual publication of the Event to all the processors that have been subscribed to it.
+스프링의 `@RabbitListener` 에노테이션을 사용한 메서드가 주어진 큐(예제에서는 'myQueue')의 각각의 메시지에 대해 호출이 될 수 있도록 해줍니다. 해당 메서드는 단순히 현재 구독 중인 프로세서들에 이벤트를 게시하게 해주는 `super.onMessage()` 메서드를 호출합니다.
 
-To subscribe Processors to this MessageSource, pass the correct `SpringAMQPMessageSource` instance to the constructor of the Subscribing Processor:
+프로세서들을 이 메시지 소스(MessageSource)에 등록하려면, 올바른 `SpringAMQPMessageSource` 인스턴스를 구독하려는 프로세서에 전달해야 합니다.
+
 ```java
-// in an @Configuration file:
+// @Configuration 파일내에 작성해야 합니다.
 @Autowired
 public void configure(EventHandlingConfiguration ehConfig, SpringAmqpMessageSource myMessageSource) {
     ehConfig.registerSubscribingEventProcessor("myProcessor", c -> myMessageSource);
 }
 ```
 
-Note that Tracking Processors are not compatible with the SpringAMQPMessageSource.
+추적 프로세서는 `SpringAMQPMessageSource`와 연동할 수 없으니, 이점에 유의하세요.
 
-Asynchronous Event Processing
+비동기 방식으로 이벤트 처리하기
 -----------------------------
 
-The recommended approach to handle Events asynchronously is by using a Tracking Event Processor. This implementation can guarantee processing of all events, even in case of a system failure (assuming the Events have been persisted).
+비동기 방식으로 이벤트를 처리하기 위해서 추적 이벤트 프로세서(Tracking Event Processor)를 사용하는 것을 권장합니다. 추적 이벤트 프로세서를 사용하여 구현하게 되면, 시스템 장애가 발생한 상황(이벤트들이 영속화되어 있다고 가정합니다.)이라도 모든 이벤트의 처리를 보장할 수 있습니다.
 
-However, it is also possible to handle Events asynchronously in a `SubscribingProcessor`. To achieve this, the `SubscribingProcessor` must be configured with an `EventProcessingStrategy`. This strategy can be used to change how invocations of the Event Listeners should be managed.
+그러나, `SubscribingProcessor`를 사용하여 이벤트를 비동기적으로 처리하는 것도 가능합니다. `SubscribingProcessor`를 사용하여 이벤트를 비동기적으로 처리하기 위해선, `SubscribingProcessor`를 반드시 `EventProcessingStrategy`와 함께 설정해줘야 합니다. `EventProcessingStrategy`는 괸리 되어야 할 이벤트 리스터들의 호출 방식을 변경하는 데 사용이 됩니다.
 
-The default strategy (`DirectEventProcessingStrategy`) invokes these handlers in the thread that delivers the Events. This allows processors to use existing transactions.
+기본 전략(`DirectEventProocessingStrategy`)은 이벤트를 전달하는 스레드 내에서 해당 이벤트 처리자들을 호출하는 것입니다. 이렇게 하면 프로세서가 이미 존재하는 트랜잭션을 사용하도록 할 수 있습니다.
 
-The other Axon-provided strategy is the `AsynchronousEventProcessingStrategy`. It uses an Executor to asynchronously invoke the Event Listeners.
+Axon에서 제공하는 다른 전략은 `AsynchronousEventProcessingStrategy`인데, 이벤트 리스너를 비동기적으로 호출하기 위해 `Executor`를 사용합니다.
 
-Even though the `AsynchronousEventProcessingStrategy` executes asynchronously, it is still desirable that certain events are processed sequentially. The `SequencingPolicy` defines whether events must be handled sequentially, in parallel or a combination of both. Policies return a sequence identifier of a given event. If the policy returns an equal identifier for two events, this means that they must be handled sequentially by the event handler. A `null` sequence identifier means the event may be processed in parallel with any other event.
+비록 `AsynchronousEventProcessingStrategy`가 비동기 방식으로 실행되더라도, 여전히 몇몇 이벤트들은 확실히 차례대로 처리되어야 합니다. `SequencePolicy`를 통해 이벤트들이 차례대로 실행되어야 하는지, 병렬로 처리되어야 하는지 혹은 두 가지 방법을 결합하여 처리되어야 하는지를 정의합니다. 정책들을 통해 주어진 이벤트의 순번을 받게 됩니다. 만약 정책을 통해 두 개의 이벤트에 대해 같은 순번을 받았다면, 두 개의 이벤트는 반드시 차례대로 처리되어야 하는 것을 말합니다. 순번이 `null`인 경우, 다른 이벤트와 상관없이 해당 이벤트는 병렬로 처리될 수 있다는 것을 말합니다.
 
-Axon provides a number of common policies you can use:
+Axon은 다음과 같이 `FullConcurrencyPolicy`, `SequentialPolicy` 그리고 `SequentialPerAggregatePolicy`들과 같은 공통 정책을 제공합니다.
 
-* The `FullConcurrencyPolicy` will tell Axon that this event handler may handle all events concurrently. This means that there is no relationship between the events that require them to be processed in a particular order.
+* `FullConcurrencyPolicy`는 특정 이벤트 처리자가 모든 이벤트를 동시에 처리할 수 있다는 것을 말하며, 이벤트 간에 특정 순서로 처리되어야 할 필요가 없음을 의미합니다.
 
-* The `SequentialPolicy` tells Axon that all events must be processed sequentially. Handling of an event will start when the handling of a previous event is finished.
+* `SequentialPolicy`는 모든 이벤트가 차례대로 실행되도록 합니다. 특정 이벤트는 이전 이벤트의 처리가 종료되어야 처리될 수 있습니다.
 
-* `SequentialPerAggregatePolicy` will force domain events that were raised from the same aggregate to be handled sequentially. However, events from different aggregates may be handled concurrently. This is typically a suitable policy to use for event listeners that update details from aggregates in database tables.
+* `SequentialPerAggregatePolicy`를 통해 같은 aggregate에서 발생한 도메인 이벤트들을 차례대로 처리되도록 강제합니다. 그렇지만, 다른 aggregate에서 발생한 이벤트들은 동시에 처리될 수 있습니다. 이런 처리 방식은 데이터베이스 테이블들의 aggregate의 상세를 갱신하는 이벤트 리스너를 사용할 때 적당합니다.
 
-Besides these provided policies, you can define your own. All policies must implement the `SequencingPolicy` interface. This interface defines a single method, `getSequenceIdentifierFor`, that returns the sequence identifier for a given event. Events for which an equal sequence identifier is returned must be processed sequentially. Events that produce a different sequence identifier may be processed concurrently. For performance reasons, policy implementations should return `null` if the event may be processed in parallel to any other event. This is faster, because Axon does not have to check for any restrictions on event processing.
+기본적으로 제공되는 정책 외에도, 필요에 맞게 새로운 정책을 직접 정의하여 사용할 수 있습니다. 정책을 직접 정의할 때는 `SequencingPolicy` 인터페이스를 반드시 구현해야 하며, `SequencingPolicy` 인터페이스가 포함하고 있는 하나의 메서드 `getSequenceIdentifierFor` 메서드를 구현해야 합니다. `getSequenceIdentifierFor` 메서드는 주어진 이벤트에 대한 순번을 반환하는 메서드 입니다. 위에서도 말한 것처럼, 같은 순번을 가지는 이벤트들을 반드시 차례대로 처리되어야 하며, 다른 순번을 가지는 이벤트들은 동시에 처리될 수 있습니다. 성능상의 이유로, 정책 구현 객체는 다른 이벤트에 상관없이 병렬로 처리될 수 있는 이벤트에 대해선 `null`을 반환해야 합니다. `null`을 반환하면, Axon 내부적으로 이벤트 처리에 대한 제약 사항들을 확인하지 않아도 되므로 빠르게 처리할 수 있습니다.
 
-It is recommended to explicitly define an `ErrorHandler` when using the `AsynchronousEventProcessingStrategy`. The default `ErrorHandler` propagates exceptions, but in an asynchronous execution, there is nothing to propagate to, other than the Executor. This may result in Events not being processed.
-Instead, it is recommended to use an `ErrorHandler` that reports errors and allows processing to continue. The `ErrorHandler` is configured on the constructor of the `SubscribingEventProcessor`, where the `EventProcessingStrategy` is also provided.
+`AsynchronousEventProcessingStrategy`를 사용할 경우, `ErrorHandler`를 명시적으로 정의하는 것을 권장합니다. 기본 `ErrorHandler`는 발생한 예외를 상위로 전달하게 되지만, 비동기 실행환경에선, 예외를 Executor를 제외한 전달할 대상이 없습니다. 이로 인해 이벤트가 처리되지 않는 상황이 발생할 수 있습니다. 대신 에러 사항을 보고한 후 이벤트 처리를 계속할 수 있는 `ErrorHandler`를 사용하는 것을 권장합니다. `ErrorHandler`를 `EventProcessingStrategy`를 받는 `SubscribingEventProcessor`의 생성자를 통해 설정합니다.
