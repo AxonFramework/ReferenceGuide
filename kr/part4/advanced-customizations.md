@@ -1,21 +1,21 @@
-Advanced Customizations
+고급 사용자 정의
 =======================
 
-Parameter Resolvers
+매개변수 리졸버
 -------------------
 
-You can configure additional `ParameterResolver`s by extending the `ParameterResolverFactory` class and creating a file named `/META-INF/service/org.axonframework.common.annotation.ParameterResolverFactory` containing the fully qualified name of the implementing class.
+`ParameterResolverFactory`를 상속하고 구현 클래스의 패키지 명을 포함한 전체 이름을 포함하는 `/META-INF/service/org.axonframework.common.annotation.ParameterResolverFactory`파일을 생성하여 추가적인 `ParameterResolver`를 설정할 수 있습니다.
 
-> **Caution**
+> **주의**
 >
-> At this moment, OSGi support is limited to the fact that the required headers are mentioned in the manifest file. The automatic detection of `ParameterResolverFactory` instances works in OSGi, but due to classloader limitations, it might be necessary to copy the contents of the `/META-INF/service/org.axonframework.common.annotation.ParameterResolverFactory` file to the OSGi bundle containing the classes to resolve parameters for (i.e. the event handler).
+> 현재 OSGi 지원은 필수 헤더들이 매니페스트 파일에 기술되어야 한다는 것으로 제한됩니다. `ParameterResolverFactory`의 인스턴스들은 OSGi상에서 자동으로 감지되지만, 클래스 로더의 제한들 때문에, `/META-INF/service/org.axonframework.common.annotation.ParameterResolverFactory` 파일의 내용을 매개변수들을 처리하는 클래스들을 포함하는 OSGi 번들에 복사해야 할 수도 있습니다. (예, 이벤트 처리자)
 
-Meta Annotations
+메타 에노테이션
 ----------------
 
-TODO
+작성 예정
 
-Customizing Message Handler behavior
+메시지 처리자 기능 재정의
 ------------------------------------
 
-TODO
+작성 예정
