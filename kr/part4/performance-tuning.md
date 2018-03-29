@@ -17,7 +17,7 @@ SQL 데이터베이스
 
 -   스냅숏 생성: 'SnapshotEventEntry' 테이블은 `aggregateIdentifier`와 `eventIdentifier`를 칼럼으로 가지며, `aggregateIdentifier`, `sequenceNumber` 그리고 `type`들을 조합하여 primary key로 사용합니다. 또한 `eventIdentifier` 칼럼을 유니크 인덱스로 사용합니다.
 
--   사가(Saga): 'AssosiationValueEntry' 테이블은 `assosiationKey`, `assosiationValue`, `sagaId` 그리고 `sagaType`들을 칼럼으로 가집니다. `sagaType`, `associationKey` 그리고 `associationValue`칼럼들을 일반 인덱스(유일하지 않은)로 사용하며, `sagaId`과 `sagaType`를 유일하지 않은 또 다른 인덱스로 사용합니다.
+-   사가(Saga): 'AssociationValueEntry' 테이블은 `assosiationKey`, `assosiationValue`, `sagaId` 그리고 `sagaType`들을 칼럼으로 가집니다. `sagaType`, `associationKey` 그리고 `associationValue`칼럼들을 일반 인덱스(유일하지 않은)로 사용하며, `sagaId`과 `sagaType`를 유일하지 않은 또 다른 인덱스로 사용합니다.
 
 예를 들어 하이버네이트가 생성한 기본 칼럼 길이로 작동하는 데 문제는 없지만 최적은 아닐 수 있습니다. 한 예로, UUID는 항상 같은 길이를 가지게 됩니다. 따라서 255자의 가변 길이 칼럼 대신, aggregate 식별자에 대해 36자리를 고정 길이로 가지는 칼럼을 사용하는 것이 좋습니다.
 
@@ -100,7 +100,7 @@ Axon Framework은 `IdentifierFactory`를 사용하여 이벤트 혹은 명령들
 
 `IdentifierFactory`를 구현하기 위한 몇 가지 필요 사항들은 다음과 같습니다. 구현체는 반드시 아래의 사항들을 만족해야 합니다.
 
--   패키지 명을 포함한 전체 클래스 명이 클래스 패스 상의 `/META-INF/services/org.axonframework.common.IdentifierFactory` 파일에 포함되어야 합니다. 
+-   패키지 명을 포함한 전체 클래스 명이 클래스 패스 상의 `/META-INF/services/org.axonframework.common.IdentifierFactory` 파일에 포함되어야 합니다.
 
 -   매개 변수를 가지지 않는 기본 생성자를 가지고 있어야 합니다.
 
