@@ -78,4 +78,4 @@ Configurer axonConfigurer = DefaultConfigurer.defaultConfiguration()
     .registerModule(ehConfiguration);
 ```
 
-스프링의 자동 설정(AutoConfiguration)을 사용하여 이벤트 처리자들을 등록하는 상세한 내용은 [이벤트 처리 설정](../part3/spring-boot-autoconfig.md#event-handling-configuration)을 참조하시면 됩니다.
+스프링의 자동 설정(AutoConfiguration)을 사용하여 이벤트 처리자들을 등록하는 상세한 내용은 [이벤트 처리 설정](../part3/spring-boot-autoconfig.md#이벤트-처리-설정)을 참조하시면 됩니다.

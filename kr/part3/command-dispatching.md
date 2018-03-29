@@ -3,7 +3,7 @@
 
 명시적인 명령 전달 메커니즘을 사용하면 좋은 점들이 있습니다. 그 중 첫 번째는 클라이언트의 의도를 명확히 묘사하는 단일 객체가 있다는 것입니다. 명령을 로깅 하여, 클라이언트의 의도와 관련 데이터들을 나중에 사용할 목적으로 저장할 수 있습니다. 명령 처리를 통해 예를 들어 웹 서비스 등을 통해 원격의 클라이언트에게 명령 처리 컴포넌트를 쉽게 노출 시킬 수 있습니다. 시작 상황(given), 실행할 명령(when) 그리고 기대 결과(then)로 이벤트들과 명령들을 열거하는 형식으로 테스트 스크립트를 정의할 수 있어서 테스트를 더 쉽게 수행할 수 있습니다([테스트](../part2/testing.md)를 참고하세요). 마지막 주요 이점은 동기와 비동기 간 변경뿐만 아니라 로컬 기반 명령 처리를 분산 환경의 명령 처리로의 변경을 매우 쉽게 처리할 수 있다는 것입니다.
 
-명시적인 명령 객체를 사용한 명령 전달 처리만이 위와 같은 처리를 하는데 유일한 방법은 아닙니다. Axon의 목적은 특정 방법을 규정하는 것이 아니라 기본적 구현으로서 모범 사례를 제공하면서 사용자 나름의 방법을 지원하는 것입니다. 따라서 명령 실행을 위한 서비스 계층(layer)을 사용할 수 있으며 서비스 계층의 메서드는 작업 단위를 시작하고([작업 단위](../part1/messaging-concepts.md#unit-of-work)를 참고하세요) 메서드의 종료에 따라서 커밋 혹은 롤백을 수행합니다.
+명시적인 명령 객체를 사용한 명령 전달 처리만이 위와 같은 처리를 하는데 유일한 방법은 아닙니다. Axon의 목적은 특정 방법을 규정하는 것이 아니라 기본적 구현으로서 모범 사례를 제공하면서 사용자 나름의 방법을 지원하는 것입니다. 따라서 명령 실행을 위한 서비스 계층(layer)을 사용할 수 있으며 서비스 계층의 메서드는 작업 단위를 시작하고([작업 단위](../part1/messaging-concepts.md#작업-단위)를 참고하세요) 메서드의 종료에 따라서 커밋 혹은 롤백을 수행합니다.
 
 다음 장에서는, Axon Framework을 사용하여 명령 전달 기반 구조의 구성과 관련된 작업의 개요를 살펴볼 것입니다.
 
@@ -116,7 +116,7 @@ MyGateway myGateway = factory.createGateway(MyGateway.class);
 
 `SimpleCommandBus`는 이름에서 알 수 있듯이, 가장 간단한 `CommandBus`의 구현체입니다. 명령들을 전송하는 스레드에서 곧장 명령들을 처리합니다. 명령이 처리되고 난 후에, 변경된 aggregate(들)은 저장되고 발생한 이벤트들은 같은 스레드에서 게시됩니다. 웹 애플리케이션과 같은 대부분은 `SimpleCommandBus`만으로도 충분하며, 설정 API에서 기본적으로 사용되는 구현체이기도 합니다.
 
-다른 대부분의 `CommandBus` 구현체들처럼, `SimpleCommandBus`에도 인터셉터(interceptor)들을 설정할 수 있습니다. `CommandDispatchInterceptor`는 커맨드 버스에서 명령이 전송될 때 호출이 됩니다. 실제 명령 처리자 메서드를 호출하기 전에 `CommandDispatchInterceptor`를 호출합니다. 따라서 해당 명령을 변경하거나 전송되지 않도록 처리할 수 있습니다. 상세 내용은 [커맨드 인터셉터](#command-interceptors)를 참조하세요.
+다른 대부분의 `CommandBus` 구현체들처럼, `SimpleCommandBus`에도 인터셉터(interceptor)들을 설정할 수 있습니다. `CommandDispatchInterceptor`는 커맨드 버스에서 명령이 전송될 때 호출이 됩니다. 실제 명령 처리자 메서드를 호출하기 전에 `CommandDispatchInterceptor`를 호출합니다. 따라서 해당 명령을 변경하거나 전송되지 않도록 처리할 수 있습니다. 상세 내용은 [커맨드 인터셉터](#커멘드-인터셉터)를 참조하세요.
 
 
 모든 명령 처리가 같은 스레드 내에서 이루어지기 때문에, JVM의 한계 내에서 작동하게 됩니다. `SimpleCommandBus`의 성능은 좋지만, 뛰어난 정도는 아닙니다. JVM의 한계를 넘어서거나 CPU 사이클을 최대한 활용하려면, 다른 `CommandBus`의 구현체를 확인해 보세요.
@@ -135,7 +135,7 @@ MyGateway myGateway = factory.createGateway(MyGateway.class);
 디스럽터 커맨드버스 (DisruptorCommandBus)
 -------------------
 
-`SimpleCommandBus`는 수긍할만한 성능 특성이 있고, 특히 [Performance Tuning](../part4/performance-tuning.md#performance-tuning)의 성능 관련 사항을 살펴보게 될 때 알 수 있을 것입니다. `SimpleCommandBus`는 같은 aggregate에 다수의 스레드가 동시에 접근하는 것을 방지하기 위한 락킹(locking)을 필요로 합니다. 이로 인해 처리 과부하 및 락(lock)을 얻기 위한 경쟁이 발생합니다.
+`SimpleCommandBus`는 수긍할만한 성능 특성이 있고, 특히 [Performance Tuning](../part4/performance-tuning.md#성능-개선)의 성능 관련 사항을 살펴보게 될 때 알 수 있을 것입니다. `SimpleCommandBus`는 같은 aggregate에 다수의 스레드가 동시에 접근하는 것을 방지하기 위한 락킹(locking)을 필요로 합니다. 이로 인해 처리 과부하 및 락(lock)을 얻기 위한 경쟁이 발생합니다.
 
 `DisruptorCommandBus`는 다른 다중 스레드를 처리 방법을 사용합니다. 다수의 스레드가 같은 프로세스를 처리하도록 하는 대신, 각각의 스레드들이 프로세스의 부분 부분을 처리하도록 합니다. `DisruptorCommandBus`는 상당히 향상된 성능을 내는 동시성 프로그래밍을 위한 작은 프레임워크인 [Disruptor](http://lmax-exchange.github.io/disruptor/)를 사용합니다. 호출자의 스레드에서 프로세스를 처리하는 방법 대신, 프로세스의 각 부분을 담당하는 두 그룹의 스레드에 작업을 전달합니다. 첫 번째 그룹의 스레드는 명령 처리자를 호출하고 aggregate의 상태를 변경합니다. 두 번째 그룹은 이벤트들을 저장하고 이벤트 스토어에 이벤트를 게시합니다.
 

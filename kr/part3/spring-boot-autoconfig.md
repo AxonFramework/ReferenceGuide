@@ -97,7 +97,7 @@ public SagaConfiguration<MySaga> mySagaConfigBean() {
 ----------------------------
 기본적으로, `@EventHandler` 에노테이션이 사용된 메서드를 포함하는 모든 싱글 톤 스코프로 등록된 스프링 빈 컴포넌트들은 이벤트 버스로 게시된 이벤트 메시지들을 수신하는 이벤트 프로세서에 구독 등록을 하게 됩니다.
 
-애플리케이션 컨텍스트에 등록되어 사용 가능한 `EventHandlingConfiguration` 빈은 이벤트 처리자들에 대한 설정을 조정할 수 있는 메서드들을 가지고 있습니다. 이벤트 처리자와 이벤트 프로세서들에 대한 상세 설정 내용은 [Configuration API](https://github.com/AxonFramework/ReferenceGuide/blob/3.1/part1/configuration-api.md)를 참고하시면 됩니다.
+애플리케이션 컨텍스트에 등록되어 사용 가능한 `EventHandlingConfiguration` 빈은 이벤트 처리자들에 대한 설정을 조정할 수 있는 메서드들을 가지고 있습니다. 이벤트 처리자와 이벤트 프로세서들에 대한 상세 설정 내용은 [설정 API](../part1/configuration-api.md)를 참고하시면 됩니다.
 
 이벤트 처리 설정을 수정하려면, 변경하고자 하는 설정 내용을 포함하는 메서드를 정의하고 `@Autowired` 에노테이션을 해당 메서드에 설정하면 됩니다.
 

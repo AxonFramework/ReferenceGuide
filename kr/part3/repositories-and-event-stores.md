@@ -313,7 +313,7 @@ public class AxonConfiguration {
 
 `XStreamSerializer`는 Dom4j 뿐만 아니라 XOM을 XML 문서로 표현하는 것을 지원합니다. `JacksonSerializer`는 Jackson의 `JsonNode`를 지원합니다.
 
-스냅샷 지정
+스냅숏 지정
 ============
 
 Aggregate들이 오랫동안 살아 있으면서 상태가 계속 변경할 때, 해당 aggregate들은 많은 양의 이벤트들을 만들어 냅니다. Aggregate의 상태를 재구성하기 위해 이 모든 이벤트를 로딩해야 한다면, 성능상의 큰 문제를 일으킬 수 있습니다. 스냅숏 이벤트는 특정 목적을 가진 도메인 이벤트이며, 임의의 다수 이벤트를 요약하여 하나의 이벤트로 만들어 냅니다. 스냅숏 이벤트를 정기적으로 생성하고 저장하여, 이벤트 저장소가 많은 양의 이벤트들을 반환하지 않도록 합니다. 마지막 스냅숏 이벤트들과 스냅숏이 만들어진 후의 이벤트들만을 반환하면 됩니다.
@@ -410,4 +410,4 @@ public class MyAggregate extends AbstractAnnotatedAggregateRoot {
 
 predicate를 통해 발견된 이벤트가 있다면, 예외가 발생합니다. 발생시킬 예외를 명시하려면, `detectConflicts` 메서드에 선택적으로 줄 수 있는 두 번째 매개 변수에 발생시키고자 하는 예외를 정의하면 됩니다. 아무런 이벤트도 발견되지 않는다면, 프로세스는 보통 때와 같이 진행됩니다.
 
-`detectConflicts` 메서드 호출이 이루어지지 않지만, 잠재적인 충돌 이벤트들이 있다면, `@CommandHandler`는 실패하게 됩니다. 이런 경우는 기대 버전의 Aggregate가 제공되었지만, 사용 가능한 `ConflictResolver`가 `@CommandHandler`메서드의 매개변수에 없는 경우 일 수 있습니다. 
+`detectConflicts` 메서드 호출이 이루어지지 않지만, 잠재적인 충돌 이벤트들이 있다면, `@CommandHandler`는 실패하게 됩니다. 이런 경우는 기대 버전의 Aggregate가 제공되었지만, 사용 가능한 `ConflictResolver`가 `@CommandHandler`메서드의 매개변수에 없는 경우 일 수 있습니다.

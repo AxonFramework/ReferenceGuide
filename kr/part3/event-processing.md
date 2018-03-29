@@ -10,7 +10,7 @@
 
 이벤트 버스
 ---------
-`EventBus`는 특정 이벤트를 구독한 (subscribe - 이벤트 처리를 위해 등록된) 이벤트 처리자에게 이벤트를 전달하기 위한 메커니즘입니다. Axon을 통해 `SimpleEventBus`와 `EmbeddedEventStore` 두 개의 이벤트 버스 구현체를 사용할 수 있습니다. 두 구현체 모두 구독(subscribing)과 추적(tracking) 프로세서를 지원합니다. ([EventProcessor](#이벤트 -프로세서) 참조). 반면, `EmbeddedEventStore`를 통해 이벤트를 영속화(persist)하고 나중에 이벤트들을 다시 재현할 수 있습니다. `SimpleEventBus`는 volatile 저장소를 가지고 있고, 특정 컴포넌트로 게시된 이벤트를 더는 신경 쓰지 않습니다(forget events).
+`EventBus`는 특정 이벤트를 구독한 (subscribe - 이벤트 처리를 위해 등록된) 이벤트 처리자에게 이벤트를 전달하기 위한 메커니즘입니다. Axon을 통해 `SimpleEventBus`와 `EmbeddedEventStore` 두 개의 이벤트 버스 구현체를 사용할 수 있습니다. 두 구현체 모두 구독(subscribing)과 추적(tracking) 프로세서를 지원합니다. ([이벤트 프로세서](#이벤트-프로세서) 참조). 반면, `EmbeddedEventStore`를 통해 이벤트를 영속화(persist)하고 나중에 이벤트들을 다시 재현할 수 있습니다. `SimpleEventBus`는 volatile 저장소를 가지고 있고, 특정 컴포넌트로 게시된 이벤트를 더는 신경 쓰지 않습니다(forget events).
 
 설정 API를 사용한다면, `SimpleEventBus`가 기본으로 설정됩니다. `SimpleEventBus` 대신 `EmbeddedEventStore`를 설정할 수 있고, 이를 위해 실제 이벤트가 저장될 저장 엔진(Storage)의 구현체를 `EmbeddedEventStore`에 제공해 주어야 합니다.
 
@@ -68,7 +68,7 @@ Axon은 이벤트 구독(subscribing) 프로세서를 기본으로 사용합니�
 
 - `registerTrackingProcessor(String name)` 메서드는 기본 설정값으로 주어진 이름을 가지는 이벤트 추적 프로세서를 정의합니다. TransactionManager와 TokenStore를 함께 설정하며, 두 객체 기본적으로 주 설정 객체를 통해 받아 올 수 있습니다.
 
-- `registerTrackingProcessor(String name, Function processorConfiguration, Function>> sequencingPolicy)` 메서드를 통해 주어진 이름을 가지는 이벤트 추적 프로세서를 정의하고, 다중 스레드 설정을 알기 위해 주어진 `TrackingEventProcessorConfiguration` 객체를 사용합니다. `SequencePolicy`는 순차적인 이벤트 처리 설정을 정의하기 위해 사용됩니다. 상세 내용은 [Parallel Processing](#병렬-프로세싱)을 참고하세요.
+- `registerTrackingProcessor(String name, Function processorConfiguration, Function>> sequencingPolicy)` 메서드를 통해 주어진 이름을 가지는 이벤트 추적 프로세서를 정의하고, 다중 스레드 설정을 알기 위해 주어진 `TrackingEventProcessorConfiguration` 객체를 사용합니다. `SequencePolicy`는 순차적인 이벤트 처리 설정을 정의하기 위해 사용됩니다. 상세 내용은 [병렬 프로세싱](#병렬-프로세싱)을 참고하세요.
 
 - `usingTrackingProcessor()` 메서드를 통해 이벤트 구독 프로세서 대신 기본으로 추적 이벤트 프로세서를 설정하도록 할 수 있습니다.
 
@@ -104,7 +104,7 @@ SagaConfiguration.trackingSagaManager(MySaga.class)
                  .configureTrackingProcessor(c -> TrackingProcessingConfiguration.forParallelProcessing(4))
 ```
 
-`TrackingProcessingConfiguration` 클래스의 메서드를 통해, 몇 개의 세그먼트를 생성할지와 어떤 스레드 팩토리(ThreadFactory)를 통해 프로세서 스레드를 생성할지를 설정할 수 있습니다. 상세 내용은 [Parallel Processing](#병렬-프로세싱)을 참고하세요.
+`TrackingProcessingConfiguration` 클래스의 메서드를 통해, 몇 개의 세그먼트를 생성할지와 어떤 스레드 팩토리(ThreadFactory)를 통해 프로세서 스레드를 생성할지를 설정할 수 있습니다. 상세 내용은 [병렬 프로세싱](#병렬-프로세싱)을 참고하세요.
 
 Saga를 위한 이벤트 처리 방법에 대한 상세 내용은 `SagaConfiguration` 클래스의 API 문서를 확인해 보세요.
 

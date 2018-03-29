@@ -108,7 +108,7 @@ Axon Framework는 현재 개발 중입니다. 규모 가변적이고 확장 가�
 다음과 같은 방법을 통해 도움을 주실 수 있습니다.
 -   [github.com/AxonFramework/AxonFramework/issues](https://github.com/AxonFramework/AxonFramework/issues)를 통해 발견한 버그 혹은 새로운 기능 요청 그리고 개선점 등을 보내 주세요. 어떤 내용이라도 보내 주면 됩니다. 단 버그를 발견하여 알려 주실 때는 최대한 자세한 내용을 알려 주셔야, 저희가 빨리 같은 버그를 재현하고 처리하는 데 많은 도움이 됩니다.
 -   애플리케이션 개발 중, Axon framework에 도움이 될 것 같은 컴포넌트를 개발하셨다면, 저희에게 소스 파일을 포함한 패치 혹은 압축 파일을 보내 주세요. 보내 주신 코드 내용을 검토하여 Axon framework에 반영하도록 노력하겠습니다. 소스 코드를 보내 주실 땐, javadoc을 사용하여 코드에 대한 문서를 만들어 주세요. 저희가 소스 코드를 이해하는 데 많은 도움이 됩니다.
--   위의 방법이외에도 저희에게 도움이 될 다른 방법이 있다면 주저하지 마시고 [Axon Framework mailing list](mailto:axonframework@googlegroups.com)으로 메세지를 보내 주세요.
+-   위의 방법이외에도 저희에게 도움이 될 다른 방법이 있다면 주저하지 마시고 [Axon Framework mailing list](mailto:axonframework@googlegroups.com)로 메세지를 보내 주세요.
 
 유료 지원받기
 ==================
