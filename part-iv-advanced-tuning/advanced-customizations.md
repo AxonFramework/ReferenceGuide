@@ -24,9 +24,7 @@ There is an implicit ordering between the configurable serializer. If no Event `
 
 See the following example on how to configure each serializer specifically, were we use `XStreamSerializer` as the default and `JacksonSerializer` for all our messages: 
 
-{% tabs %}
-{% tab title="Axon Configuration API" %}
-```java
+{% codetabs name="Axon Configuration API", type="java" -%}
 public class SerializerConfiguration {
     
     public void serializerConfiguration(Configurer configurer) {
@@ -40,27 +38,19 @@ public class SerializerConfiguration {
                   .configureEventSerializer(configuration -> messageSerializer);
     }
 }
-```
-{% endtab %}
-{% tab title="Spring Boot AutoConfiguration - Properties file" %}
-```properties
+{%- language name="Spring Boot AutoConfiguration - Properties file", type="properties" -%}
 # Possible values for these keys are `default`, `xstream`, `java`, and `jackson`.
 axon.serializer.general
 axon.serializer.events
 axon.serializer.messages
-```
-{% endtab %}
-{% tab title="Spring Boot AutoConfiguration - YML file" %}
-```yaml
+{%- language name="Spring Boot AutoConfiguration - YML file", type="yaml" -%}
 # Possible values for these keys are `default`, `xstream`, `java`, and `jackson`.
 axon:
     serializer:
         general: 
         events: 
         messages: 
-```
-{% endtab %}
-{% endtabs %}
+{%- endcodetabs %}
 
 ## Meta Annotations
 

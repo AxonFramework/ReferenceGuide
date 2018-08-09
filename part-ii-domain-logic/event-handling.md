@@ -57,9 +57,7 @@ Event Handling components are defined using an `EventHandlingConfiguration` clas
 
 To register objects with `@EventHandler` methods, use the `registerEventHandler` method on the `EventHandlingConfiguration`:
 
-{% tabs %}
-{% tab title="Axon Configuration API" %}
-```java
+{% codetabs name="Axon Configuration API", type="java" -%}
 // define an EventHandlingConfiguration
 EventHandlingConfiguration ehConfiguration = new EventHandlingConfiguration()
     .registerEventHandler(conf -> new MyEventHandlerClass());
@@ -67,18 +65,12 @@ EventHandlingConfiguration ehConfiguration = new EventHandlingConfiguration()
 // the module needs to be registered with the Axon Configuration
 Configurer axonConfigurer = DefaultConfigurer.defaultConfiguration()
     .registerModule(ehConfiguration);
-```
-{% endtab %}
-
-{% tab title="Spring Boot AutoConfiguration" %}
-```java
+{%- language name="Spring Boot AutoConfiguration", type="java" -%}
 @Component
 public class MyEventHandlerClass {
     // contains @EventHandler(s)
 }
-```
-{% endtab %}
-{% endtabs %}
+{%- endcodetabs %}
 
 See [Event Handling Configuration](../part-iii-infrastructure-components/spring-boot-autoconfiguration.md#event-handling-configuration) for details on registering event handlers using Spring AutoConfiguration.
 
