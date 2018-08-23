@@ -54,3 +54,4 @@ When using Spring, there is no need to explicitly use the `Configurer`. Instead,
 
 Axon will use the Spring Application Context to locate specific implementations of building blocks and provide default for those that are not there. So, instead of registering the building blocks with the `Configurer`, in Spring you just have to make them available in the Application Context as `@Bean`s.
 
+You can consult [this](../part-iii-infrastructure-components/spring-boot-autoconfiguration.md) section for more information on how to configure Axon together with Spring Boot.
