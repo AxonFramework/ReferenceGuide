@@ -102,6 +102,35 @@ When application components need resources at different stages of message proces
 
 When nested Units of Work need to be able to access a resource, it is recommended to register it on the root Unit of Work, which can be accessed using `unitOfWork.root()`. If a Unit of Work is the root, it will simply return itself.
 
+The fine grained control concepts around the Unit of Work which we have discussed here, like performing actions in certain phases and attaching resources, might look a little like this:
+
+```java
+// In this example, we want to perform some actions on the Unit Of Work of an event if this is handled
+public class EventHandlingComponent {
+
+    private TransactionManager transactionManager;
+    //...
+
+    // Firstly, you add the UnitOfWork as a parameter to the Event Handling function, so that you can easily access it
+    @EventHandler
+    public void on(SomeEvent event, UnitOfWork<EventMessage<SomeEvent>> unitOfWork) {
+        // We have decided we want to attach our own TransactionManager to it, like so
+        unitOfWork.attachTransaction(transactionManager);
+
+        // Additionally, we want to introduce a function we want to be executed during the After Commit phase
+        unitOfWork.afterCommit(uow -> {
+            // For that action, we try to retrieve 'some-resource' from the Unit Of Work its resources
+            Object resource = uow.getOrComputeResource("some-resource", resourceKey -> new Object());
+            // And then we perform 'some action'...
+        });
+    }
+
+    //...
+}
+```
+
+There are several other action you can perform on/with the `UnitOfWork`, which are well documented in its respective JavaDoc page. 
+
 ## Correlation Data Provider
 As already mentioned, Axon Framework is based on messaging concepts. In order to understand the flow of a living system, it is crucial to follow the message path. Hence, specific meta-data should be added to each message to be able to track its path through the system. Correlation Data is something that is usually added to a message its meta-data so that we can track the origin and causality of the message.
 
