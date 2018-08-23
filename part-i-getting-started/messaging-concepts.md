@@ -114,4 +114,34 @@ Besides using the mentoined set above, it is also possible to define your own `C
 
 On top of `CorrelationDataProvider`s there is a `CorrelationDataInterceptor` which is a handler interceptor and it registers all configured `CorrelationDataProvider`s with a current unit of work.
 
-By calling `Configurer#configureCorrelationDataProviders(Function<Configuration, List<CorrelationDataProvider>> correlationDataProviderBuilder)` it is possible to configure `CorrelationDataProvider`s. If you are using Spring, having a bean of type `CorrelationDataProvider` in  the Spring Application Context is sufficient.
+By calling `Configurer#configureCorrelationDataProviders(Function<Configuration, List<CorrelationDataProvider>>)`, it is possible to configure `CorrelationDataProvider`s. If you are using Spring, having a bean of type `CorrelationDataProvider` in  the Spring Application Context is sufficient.
+Here is an example of what configuring either of both might look like:
+
+{% tabs %}
+{% tab title="Axon Configuration API" %}
+```java
+public class Configuration {
+    //...
+    public void configureCorrelationDataProvider() {
+        Configurer configurer = DefaultConfigurer.defaultConfiguration();
+        configurer.configureCorrelationDataProviders(config -> new SimpleCorrelationDataProvider());
+        //...
+    }
+    //...
+}
+```
+{% endtab %}
+
+{% tab title="Spring Boot AutoConfiguration" %}
+```java
+public class Configuration {
+    //...
+    @Bean
+    public CorrelationDataProvider correlationDataProvider() {
+        return new SimpleCorrelationDataProvider(); 
+    }
+    //...
+}
+```
+{% endtab %}
+{% endtabs %}
