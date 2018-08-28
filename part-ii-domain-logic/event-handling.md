@@ -14,9 +14,10 @@ Axon provides out-of-the-box support for the following parameter types:
 * Parameters annotated with `@Timestamp` and of type `java.time.Instant` \(or `java.time.temporal.Temporal`\) will resolve to the timestamp of the `EventMessage`. This is the time at which the Event was generated.
 * Parameters annotated with `@SequenceNumber` and of type `java.lang.Long` or `long` will resolve to the `sequenceNumber` of a `DomainEventMessage`. This provides the order in which the Event was generated \(within the scope of the Aggregate it originated from\).
 * Parameters assignable to Message will have the entire `EventMessage` injected \(if the message is assignable to that parameter\). If the first parameter is of type message, it effectively matches an Event of any type, even if generic parameters would suggest otherwise. Due to type erasure, Axon cannot detect what parameter is expected. In such case, it is best to declare a parameter of the payload type, followed by a parameter of type Message.
+* Parameters of type `java.lang.String` which are annotated with `@MessageIdentifier` will resolve to the `identifier` of the `EventMessage` being handled.
 * When using Spring and the Axon Configuration is activated \(either by including the Axon Spring Boot Starter module, or by specifying `@EnableAxon` on your `@Configuration` file\), any other parameters will resolve to autowired beans, if exactly one injectable candidate is available in the application context. This allows you to inject resources directly into `@EventHandler` annotated methods.
 
-You can configure additional `ParameterResolver`s by implementing the `ParameterResolverFactory` interface and creating a file named `/META-INF/service/org.axonframework.common.annotation.ParameterResolverFactory` containing the fully qualified name of the implementing class. See [Advanced Customizations](../part-iv-advanced-tuning/advanced-customizations.md) for details.
+You can configure additional `ParameterResolver`s by implementing the `ParameterResolverFactory` interface and creating a file named `/META-INF/service/org.axonframework.common.annotation.ParameterResolverFactory` containing the fully qualified name of the implementing class. See [Advanced Customizations](../part-iv-advanced-tuning/advanced-customizations.md) for details on how to approach this.
 
 In all circumstances, at most one event handler method is invoked per listener instance. Axon will search for the most specific method to invoke, using following rules:
 
@@ -55,18 +56,25 @@ In the example above, the handler methods of `SubListener` will be invoked for a
 
 Event Handling components are defined using an `EventHandlingConfiguration` class, which is registered as a module with the global Axon `Configurer`. Typically, an application will have a single `EventHandlingConfiguration` defined, but larger more modular applications may choose to define one per module.
 
-To register objects with `@EventHandler` methods, use the `registerEventHandler` method on the `EventHandlingConfiguration`:
+To register objects with `@EventHandler` methods, for example a `MyEventHandlerClass`, use `EventHandlingConfiguration#registerEventHandler` if you are using the `Configuration` API.
+In case you are using Spring (Boot) to configure your application, simply defining a bean with an `@EventHandler` annotated function in it is sufficient.
+Check below for examples on both approaches:
 
 {% tabs %}
 {% tab title="Axon Configuration API" %}
 ```java
-// define an EventHandlingConfiguration
-EventHandlingConfiguration ehConfiguration = new EventHandlingConfiguration()
-    .registerEventHandler(conf -> new MyEventHandlerClass());
+public class Configuration {
+    
+    public void configureMyEventHandler() {
+        // Define an EventHandlingConfiguration to configure our 'MyEventHandlerClass' to.
+        EventHandlingConfiguration ehConfiguration = new EventHandlingConfiguration()
+                .registerEventHandler(conf -> new MyEventHandlerClass());
 
-// the module needs to be registered with the Axon Configuration
-Configurer axonConfigurer = DefaultConfigurer.defaultConfiguration()
-    .registerModule(ehConfiguration);
+        // The module needs to be registered with the Axon Configuration
+        Configurer axonConfigurer = DefaultConfigurer.defaultConfiguration()
+                                                     .registerModule(ehConfiguration);
+    }
+}
 ```
 {% endtab %}
 
@@ -74,11 +82,14 @@ Configurer axonConfigurer = DefaultConfigurer.defaultConfiguration()
 ```java
 @Component
 public class MyEventHandlerClass {
-    // contains @EventHandler(s)
+    // ...
+    @EventHandler
+    public void on(SomeEvent event) {
+        // Perform some action with the event
+    }
 }
 ```
 {% endtab %}
 {% endtabs %}
 
-See [Event Handling Configuration](../part-iii-infrastructure-components/spring-boot-autoconfiguration.md#event-handling-configuration) for details on registering event handlers using Spring AutoConfiguration.
-
+See the [Event Handling Configuration](../part-iii-infrastructure-components/spring-boot-autoconfiguration.md#event-handling-configuration) section for details on registering event handlers using Spring AutoConfiguration.
