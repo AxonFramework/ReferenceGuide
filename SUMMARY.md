@@ -31,4 +31,5 @@
 * [Metrics and Monitoring](part-iv-advanced-tuning/metrics-and-monitoring.md)
 * [Advanced customizations](part-iv-advanced-tuning/advanced-customizations.md)
 * [Performance Tuning](part-iv-advanced-tuning/performance-tuning.md)
+* [Distribution Considerations](part-iv-advanced-tuning/distribution-considerations.md)
 
