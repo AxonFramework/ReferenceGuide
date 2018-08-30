@@ -15,3 +15,5 @@ In distributed environment commands might not be always delivered due to some ne
 ## Distributing Events
 
 ## Distributing Queries
+
+Currently, running Queries in distributed environment is possible by using AxonHub only.
