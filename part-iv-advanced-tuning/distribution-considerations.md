@@ -6,11 +6,13 @@ One of the core properties of applications built using Axon is Location Transpar
 
 More details on how Distributing the Command Bus works can be found [here](/part-iii-infrastructure-components/command-dispatching.md#distributing-the-command-bus). Two the most important components in a `DistributedCommandBus` are `CommandBusConnector` and `CommandRouter`. 
 
-`CommandBusConnector` is a component that remotely connects multiple `CommandBus`es. Axon provides Spring Cloud and JGroups connectors which are free and open source and [AxonHub](https://axoniq.io/product-overview/axonhub) which is a paid component. Of course, you can implement your own connector if provided are not sufficient.
+`CommandBusConnector` is a component that remotely connects multiple `CommandBus`es. Axon provides Spring Cloud and JGroups connectors which are free and open source. Of course, you can implement your own connector if provided are not sufficient.
 
 `CommandRouter` is responsible for providing a member of a cluster based on a provided Command Message. This cluster member is the one which should handle the given command. Integral part of `CommandRouter` is a `RoutingStrategy`. `RoutingStrategy` is a mechanism that generates a routing key for a given command. Axon provides two strategies: `AnnotationRoutingStrategy` (provides a routing key based on `@TargetAggregateIdentifier` field in a Command Message) and `MetaDataRoutingStrategy` (provides a routing key based on provided Meta Data key).
 
 In distributed environment commands might not be always delivered due to some network issues (partitions) or some other "hiccups". When that happens it is safe just to resend the command. Axon provides a `RetryScheduler` mechanism for this purposes.
+
+> **Note** For distributing commands, there's an option to use the [AxonHub](https://axoniq.io/product-overview/axonhub).
 
 ## Distributing Events
 
