@@ -16,7 +16,7 @@ A deadline can be scheduled only by providing a `Duration` after which it will b
 String deadlineId = deadlineManager.schedule(Duration.ofMillis(500), "myDeadline");
 ```
 
-As a result we receive a `deadlineId` which can be used to cancel the deadline. Cancelling a deadline could for example come in handy when a certain event means that the previously scheduled deadline has become obsolete (e.g. there is a deadline for paying the invoice, but the client payed the amount which means that the deadline is obsolete and can be canceled).
+As a result we receive a `deadlineId` which can be used to cancel the deadline. In most cases, storing this `deadlineId` as a field within your Aggregate/Saga is the most convenient. Cancelling a deadline could for example come in handy when a certain event means that the previously scheduled deadline has become obsolete (e.g. there is a deadline for paying the invoice, but the client payed the amount which means that the deadline is obsolete and can be canceled).
 
 ```java
 deadlineManager.cancelSchedule("myDeadline", deadlineId);
